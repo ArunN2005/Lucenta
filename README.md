@@ -1,6 +1,6 @@
 <!--
   ╔══════════════════════════════════════════════════════════╗
-  ║           GIGSHIELD — DEVTRAILS 2026 | PHASE 1           ║
+  ║            LUCENTA — DEVTRAILS 2026 | PHASE 1            ║
   ║     Parametric Income Insurance · Q-Commerce Workers     ║
   ╚══════════════════════════════════════════════════════════╝
 -->
@@ -8,12 +8,12 @@
 <div align="center">
 
 ```
- ██████╗ ██╗ ██████╗ ███████╗██╗  ██╗██╗███████╗██╗     ██████╗
-██╔════╝ ██║██╔════╝ ██╔════╝██║  ██║██║██╔════╝██║     ██╔══██╗
-██║  ███╗██║██║  ███╗███████╗███████║██║█████╗  ██║     ██║  ██║
-██║   ██║██║██║   ██║╚════██║██╔══██║██║██╔══╝  ██║     ██║  ██║
-╚██████╔╝██║╚██████╔╝███████║██║  ██║██║███████╗███████╗██████╔╝
- ╚═════╝ ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚═════╝
+██╗     ██╗   ██╗ ██████╗███████╗███╗   ██╗████████╗ █████╗
+██║     ██║   ██║██╔════╝██╔════╝████╗  ██║╚══██╔══╝██╔══██╗
+██║     ██║   ██║██║     █████╗  ██╔██╗ ██║   ██║   ███████║
+██║     ██║   ██║██║     ██╔══╝  ██║╚██╗██║   ██║   ██╔══██║
+███████╗╚██████╔╝╚██████╗███████╗██║ ╚████║   ██║   ██║  ██║
+╚══════╝ ╚═════╝  ╚═════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝  ╚═╝
 ```
 
 ### Parametric Income Insurance for India's Q-Commerce Delivery Workers
@@ -33,7 +33,7 @@
 
 We've been thinking about this problem for a while — not just as a hackathon prompt, but as something we've genuinely observed. One of our team members spent time talking to Zepto delivery partners near our college campus during last year's monsoon. The thing that stuck with us: these guys were losing ₹600–₹800 on a single bad-weather day, and their only "backup plan" was to not eat out that week.
 
-That conversation is what GigShield is built from.
+That conversation is what Lucenta is built from.
 
 ---
 
@@ -43,7 +43,7 @@ That conversation is what GigShield is built from.
 2. [The Problem We're Actually Solving](#the-problem-were-actually-solving)
 3. [Why We Picked Q-Commerce](#why-we-picked-q-commerce)
 4. [Meet Arjun — Our Primary Persona](#meet-arjun--our-primary-persona)
-5. [How GigShield Works](#how-gigshield-works)
+5. [How Lucenta Works](#how-lucenta-works)
 6. [Real Scenarios We Designed For](#real-scenarios-we-designed-for)
 7. [The Weekly Premium Model](#the-weekly-premium-model)
 8. [Parametric Triggers — The Two-Key Rule](#parametric-triggers--the-two-key-rule)
@@ -134,7 +134,7 @@ The existing "solutions" are either nonexistent or completely misaligned — mon
 
 What he needs is: **₹400 in his UPI account by the time the rain stops.** No forms. No agent calls. No waiting.
 
-That's the only thing GigShield does. We think doing one thing right matters more than doing five things badly.
+That's the only thing Lucenta does. We think doing one thing right matters more than doing five things badly.
 
 ---
 
@@ -191,7 +191,7 @@ Arjun is not an abstraction. He's a composite of conversations we had with actua
 
 ---
 
-## How GigShield Works
+## How Lucenta Works
 
 The entire product can be described in three words:
 
@@ -301,25 +301,13 @@ Weekly pricing means the premium comes out of money he already has, covering the
 
 ### The Three Tiers
 
-```
-  ┌─────────────────────────────────────────────────────────────┐
-  │                     SHIELD TIERS                            │
-  ├─────────────────┬───────────────┬───────────┬──────────────┤
-  │                 │    WEEKLY     │ COVERAGE  │              │
-  │      TIER       │    PREMIUM    │    CAP    │   FOR WHO    │
-  ├─────────────────┼───────────────┼───────────┼──────────────┤
-  │  Shield Basic   │    ₹29/wk     │   ₹800    │ Part-time /  │
-  │                 │  (₹4.14/day)  │           │ new riders   │
-  ├─────────────────┼───────────────┼───────────┼──────────────┤
-  │  Shield Plus    │    ₹49/wk     │  ₹1,500   │ Full-time    │
-  │   ◄ TARGET ►    │  (₹7.00/day)  │           │ daily riders │
-  ├─────────────────┼───────────────┼───────────┼──────────────┤
-  │  Shield Max     │    ₹79/wk     │  ₹2,500   │ High-earning │
-  │                 │ (₹11.28/day)  │           │ long-tenure  │
-  └─────────────────┴───────────────┴───────────┴──────────────┘
+| Tier | Weekly Premium | Daily Cost | Coverage Cap | Best For |
+|---|---|---|---|---|
+| **Lucenta Basic** | ₹29 / week | ₹4.14 / day | ₹800 | Part-time or new riders |
+| **Lucenta Plus** ◄ TARGET | ₹49 / week | ₹7.00 / day | ₹1,500 | Full-time daily riders |
+| **Lucenta Max** | ₹79 / week | ₹11.28 / day | ₹2,500 | High-earning, long-tenure riders |
 
-  Shield Plus at ₹7/day = less than one auto ride to the dark store.
-```
+Lucenta Plus at ₹7/day = less than one auto ride to the dark store.
 
 ### How AI Adjusts Coverage (Not Price)
 
@@ -348,15 +336,13 @@ The single most important architectural decision we made:
 
 We call this the Two-Key Rule. Every covered disruption requires two independent signals confirmed simultaneously. It eliminates false triggers from mild weather, and — critically — it makes GPS spoofing completely insufficient on its own.
 
-```
-  TRIGGER TYPE         SIGNAL A (Primary)         SIGNAL B (Secondary)      PAYOUT
-  ─────────────────────────────────────────────────────────────────────────────────
-  Heavy rain/flood     IMD red alert >50mm/hr      Zone order drop >70%       100%
-  Extreme heat/AQI     IMD >42°C OR AQI >400       Active rider drop >50%      50%
-  Civic disruption     Govt/news NLP: curfew        Zero orders in PIN zone    100%
-  Waterlogging         IMD flood + BBMP data        GPS cluster static >45m    100%
-  Platform outage      API heartbeat fail >20m      Worker sees 0 orders        70%
-```
+| Trigger Type | Signal A — Primary | Signal B — Secondary | Payout |
+|---|---|---|---|
+| Heavy rain / flood | IMD red alert > 50mm/hr | Zone order volume drop > 70% | 100% |
+| Extreme heat / AQI | IMD temp > 42°C OR AQI > 400 | Active rider drop in zone > 50% | 50% |
+| Civic disruption | Govt/news NLP: curfew or strike keyword | Zero order assignments in PIN zone | 100% |
+| Waterlogging | IMD flood warning + BBMP data | GPS cluster static > 45 min in zone | 100% |
+| Platform outage | API heartbeat failure > 20 min | Worker app showing 0 available orders | 70% |
 
 **Why platform order volume as Signal B?** This is the part we haven't seen done elsewhere. Traditional parametric systems only use weather APIs. But if Zepto orders are flowing despite bad weather, riders are clearly still working. The demand signal closes the loop that weather data alone can't — and it also makes GPS spoofing ineffective. You can fake a GPS location. You can't fake Zepto's order volume being down 75%.
 
@@ -536,7 +522,7 @@ Three ML components — full design in the adversarial section:
 
 ## Why Mobile, Not Web
 
-Q-Commerce delivery partners live in their apps. Zepto's rider app is open 10+ hours a day. If GigShield lives in a browser tab, it's already dead — they'll never look at it.
+Q-Commerce delivery partners live in their apps. Zepto's rider app is open 10+ hours a day. If Lucenta lives in a browser tab, it's already dead — they'll never look at it.
 
 Three non-negotiable reasons for mobile:
 1. **Push notifications** — the only way to reach a rider mid-shift about a disruption in real time
@@ -551,66 +537,27 @@ We're building React Native, Android-first. Roughly 85% of the riders we've spok
 
 What we're actually going to use — not an aspirational list.
 
-```
-  LAYER              TECHNOLOGY              REASON
-  ─────────────────────────────────────────────────────────────────
-  Mobile App         React Native + Expo     Team familiarity.
-                                             Matters at hackathon pace.
-
-  Backend API        Node.js + Express       Fast iteration, JSON-native.
-
-  ML Inference       Python + FastAPI        Separate service — ML and
-                     (microservice)          API iteration speeds differ.
-
-  Primary DB         PostgreSQL              Policies, workers, claims,
-                                             zones, audit logs.
-
-  Cache / State      Redis                   Real-time trigger state,
-                                             session management,
-                                             rate limiting.
-
-  Event Stream       Apache Kafka            Disruption signals fan out to
-                                             multiple consumers and can't
-                                             be dropped.
-
-  ML Models          XGBoost + Isolation     Risk profiling + anomaly
-                     Forest (scikit-learn)   detection. Both as FastAPI
-                                             endpoints.
-
-  Weather APIs       IMD + OpenWeatherMap    IMD primary. OWM backup.
-                     + AQICN                 Mocked where rate-limited.
-
-  Platform APIs      Zepto/Blinkit mock      No partner API access yet.
-                                             Simulated accurately.
-
-  Payments           Razorpay test mode      Sandbox through Phase 2.
-                     + UPI sandbox
-
-  Infrastructure     AWS EC2 + S3            Standard. Nothing exotic.
-                     Docker + GH Actions
-```
+| Layer | Technology | Reason |
+|---|---|---|
+| Mobile App | React Native + Expo | Team familiarity — matters at hackathon pace. |
+| Backend API | Node.js + Express | Fast iteration, JSON-native. |
+| ML Inference | Python + FastAPI (microservice) | Separate service — ML and API iteration speeds differ. |
+| Primary DB | PostgreSQL | Policies, workers, claims, zones, audit logs. |
+| Cache / State | Redis | Real-time trigger state, session management, rate limiting. |
+| Event Stream | Apache Kafka | Disruption signals fan out to multiple consumers and can't be dropped. |
+| ML Models | XGBoost + Isolation Forest (scikit-learn) | Risk profiling + anomaly detection. Both deployed as FastAPI endpoints. |
+| Weather APIs | IMD + OpenWeatherMap + AQICN | IMD primary. OWM backup. Mocked where rate-limited. |
+| Platform APIs | Zepto / Blinkit mock | No partner API access yet. Simulated accurately. |
+| Payments | Razorpay test mode + UPI sandbox | Sandbox through Phase 2. |
+| Infrastructure | AWS EC2 + S3, Docker, GitHub Actions | Standard. Nothing exotic. |
 
 ### Development Timeline
 
-```
-  PHASE 1 (Weeks 1–2) — NOW
-  ├── Persona research and market study
-  ├── Architecture design + Two-Key Rule definition
-  ├── This README
-  └── Initial tech spikes (API connectivity tests)
-
-  PHASE 2 (Weeks 3–4)
-  ├── Working React Native app: onboarding + policy management
-  ├── Dynamic premium calculation (XGBoost risk model)
-  ├── Claims engine: auto-trigger + payout calculation
-  └── 3–5 disruption triggers with mock APIs
-
-  PHASE 3 (Weeks 5–6)
-  ├── Fraud detection: sensor fusion + social graph model
-  ├── Payout simulation: Razorpay sandbox
-  ├── Insurer dashboard with live disruption map
-  └── 5-minute demo video + final pitch deck
-```
+| Phase | Timeline | What We're Doing |
+|---|---|---|
+| **Phase 1** | Weeks 1–2 (now) | Persona research, market study, architecture design, Two-Key Rule definition, this README, initial tech spikes |
+| **Phase 2** | Weeks 3–4 | Working React Native app — onboarding, policy management, dynamic premium calc, claims engine, 3–5 disruption triggers with mock APIs |
+| **Phase 3** | Weeks 5–6 | Fraud detection (sensor fusion + social graph), payout simulation via Razorpay sandbox, insurer dashboard, 5-min demo video, final pitch deck |
 
 ---
 
@@ -632,25 +579,13 @@ A delivery partner genuinely stranded in a flood zone looks very different from 
 
 **Device sensor behavior**
 
-```
-  SIGNAL           GENUINELY STRANDED           GPS SPOOFER AT HOME
-  ─────────────────────────────────────────────────────────────────
-  Accelerometer    Irregular micro-movement      Near-zero variance
-                   Rain vibration, sheltering,   Phone sitting still
-                   bike leaning                  on a table
-
-  Gyroscope        Frequent orientation shifts   Flat. No rotation
-                   Checking app, looking around  at all
-
-  Barometric       Pressure drop matching        Normal indoor
-  sensor           the storm system              pressure
-
-  Network signal   Degraded/fluctuating          Full bars, stable
-                   (tower interference in rain)  No interference
-
-  Battery drain    Elevated (GPS + network       Normal baseline
-                   retries under bad signal)     drain rate
-```
+| Signal | Genuinely Stranded | GPS Spoofer at Home |
+|---|---|---|
+| **Accelerometer** | Irregular micro-movement — rain vibration, sheltering, bike leaning | Near-zero variance. Phone sitting still on a table. |
+| **Gyroscope** | Frequent orientation shifts — checking app, looking around | Flat. No rotation at all. |
+| **Barometric sensor** | Pressure drop matching the storm system | Normal indoor pressure. |
+| **Network signal strength** | Degraded or fluctuating (tower interference in heavy rain) | Full bars, stable. No interference. |
+| **Battery drain** | Elevated — GPS + network retries under bad signal | Normal baseline drain rate. |
 
 We build a "stranded behavioral fingerprint" from the combination. No single sensor is conclusive — the combination is what's very hard to fake without actually being outside in the disruption.
 
@@ -749,7 +684,7 @@ Fraudsters can't know who else in the zone is or isn't claiming. This asymmetry 
 
 **Tier-upgrade timing**
 
-Fraudsters want maximum payout. We flag workers who upgrade from Shield Basic to Shield Max within 48–72 hours of a major storm appearing in the IMD 5-day forecast. That pattern doesn't appear in legitimate usage.
+Fraudsters want maximum payout. We flag workers who upgrade from Lucenta Basic to Lucenta Max within 48–72 hours of a major storm appearing in the IMD 5-day forecast. That pattern doesn't appear in legitimate usage.
 
 ---
 
@@ -802,7 +737,7 @@ We don't punish the whole zone. We isolate the subgraph. Claims from the connect
 
 ---
 
-### Why the Market Crash Syndicate Fails Against GigShield
+### Why the Market Crash Syndicate Fails Against Lucenta
 
 ```
   THE 500-PERSON GPS SPOOFING RING FAILS ON 5 INDEPENDENT DIMENSIONS:
