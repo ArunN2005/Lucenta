@@ -1,6 +1,6 @@
 <!--
   ╔══════════════════════════════════════════════════════════╗
-  ║            LUCENTA — DEVTRAILS 2026 | PHASE 1            ║
+  ║            KAVACH — DEVTRAILS 2026 | PHASE 1            ║
   ║     Parametric Income Insurance · Q-Commerce Workers     ║
   ╚══════════════════════════════════════════════════════════╝
 -->
@@ -8,12 +8,12 @@
 <div align="center">
 
 ```
-██╗     ██╗   ██╗ ██████╗███████╗███╗   ██╗████████╗ █████╗
-██║     ██║   ██║██╔════╝██╔════╝████╗  ██║╚══██╔══╝██╔══██╗
-██║     ██║   ██║██║     █████╗  ██╔██╗ ██║   ██║   ███████║
-██║     ██║   ██║██║     ██╔══╝  ██║╚██╗██║   ██║   ██╔══██║
-███████╗╚██████╔╝╚██████╗███████╗██║ ╚████║   ██║   ██║  ██║
-╚══════╝ ╚═════╝  ╚═════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝  ╚═╝
+██╗  ██╗ █████╗ ██╗   ██╗ █████╗  ██████╗██╗  ██╗
+██║ ██╔╝██╔══██╗██║   ██║██╔══██╗██╔════╝██║  ██║
+█████╔╝ ███████║██║   ██║███████║██║     ███████║
+██╔═██╗ ██╔══██║╚██╗ ██╔╝██╔══██║██║     ██╔══██║
+██║  ██╗██║  ██║ ╚████╔╝ ██║  ██║╚██████╗██║  ██║
+╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 ```
 
 ### Parametric Income Insurance for India's Q-Commerce Delivery Workers
@@ -33,7 +33,7 @@
 
 We've been thinking about this problem for a while — not just as a hackathon prompt, but as something we've genuinely observed. One of our team members spent time talking to Zepto delivery partners near our college campus during last year's monsoon. The thing that stuck with us: these guys were losing ₹600–₹800 on a single bad-weather day, and their only "backup plan" was to not eat out that week.
 
-That conversation is what Lucenta is built from.
+That conversation is what Kavach is built from.
 
 ---
 
@@ -43,7 +43,7 @@ That conversation is what Lucenta is built from.
 2. [The Problem We're Actually Solving](#the-problem-were-actually-solving)
 3. [Why We Picked Q-Commerce](#why-we-picked-q-commerce)
 4. [Meet Arjun — Our Primary Persona](#meet-arjun--our-primary-persona)
-5. [How Lucenta Works](#how-lucenta-works)
+5. [How Kavach Works](#how-kavach-works)
 6. [Real Scenarios We Designed For](#real-scenarios-we-designed-for)
 7. [The Weekly Premium Model](#the-weekly-premium-model)
 8. [Parametric Triggers — The Two-Key Rule](#parametric-triggers--the-two-key-rule)
@@ -134,7 +134,7 @@ The existing "solutions" are either nonexistent or completely misaligned — mon
 
 What he needs is: **₹400 in his UPI account by the time the rain stops.** No forms. No agent calls. No waiting.
 
-That's the only thing Lucenta does. We think doing one thing right matters more than doing five things badly.
+That's the only thing Kavach does. We think doing one thing right matters more than doing five things badly.
 
 ---
 
@@ -191,7 +191,7 @@ Arjun is not an abstraction. He's a composite of conversations we had with actua
 
 ---
 
-## How Lucenta Works
+## How Kavach Works
 
 The entire product can be described in three words:
 
@@ -303,11 +303,11 @@ Weekly pricing means the premium comes out of money he already has, covering the
 
 | Tier | Weekly Premium | Daily Cost | Coverage Cap | Best For |
 |---|---|---|---|---|
-| **Lucenta Basic** | ₹29 / week | ₹4.14 / day | ₹800 | Part-time or new riders |
-| **Lucenta Plus** ◄ TARGET | ₹49 / week | ₹7.00 / day | ₹1,500 | Full-time daily riders |
-| **Lucenta Max** | ₹79 / week | ₹11.28 / day | ₹2,500 | High-earning, long-tenure riders |
+| **Kavach Basic** | ₹29 / week | ₹4.14 / day | ₹800 | Part-time or new riders |
+| **Kavach Plus** ◄ TARGET | ₹49 / week | ₹7.00 / day | ₹1,500 | Full-time daily riders |
+| **Kavach Max** | ₹79 / week | ₹11.28 / day | ₹2,500 | High-earning, long-tenure riders |
 
-Lucenta Plus at ₹7/day = less than one auto ride to the dark store.
+Kavach Plus at ₹7/day = less than one auto ride to the dark store.
 
 ### How AI Adjusts Coverage (Not Price)
 
@@ -607,7 +607,7 @@ The last two being rule-based is a deliberate design choice, not a gap. The ones
 
 ## Why Mobile, Not Web
 
-Q-Commerce delivery partners live in their apps. Zepto's rider app is open 10+ hours a day. If Lucenta lives in a browser tab, it's already dead — they'll never look at it.
+Q-Commerce delivery partners live in their apps. Zepto's rider app is open 10+ hours a day. If Kavach lives in a browser tab, it's already dead — they'll never look at it.
 
 Three non-negotiable reasons for mobile:
 1. **Push notifications** — the only way to reach a rider mid-shift about a disruption in real time
@@ -776,7 +776,7 @@ Fraudsters can't know who else in the zone is or isn't claiming. This asymmetry 
 
 **Tier-upgrade timing**
 
-Fraudsters want maximum payout. We flag workers who upgrade from Lucenta Basic to Lucenta Max within 48–72 hours of a major storm appearing in the IMD 5-day forecast. That pattern doesn't appear in legitimate usage.
+Fraudsters want maximum payout. We flag workers who upgrade from Kavach Basic to Kavach Max within 48–72 hours of a major storm appearing in the IMD 5-day forecast. That pattern doesn't appear in legitimate usage.
 
 ---
 
@@ -829,7 +829,7 @@ We don't punish the whole zone. We isolate the subgraph. Claims from the connect
 
 ---
 
-### Why the Market Crash Syndicate Fails Against Lucenta
+### Why the Market Crash Syndicate Fails Against Kavach
 
 ```
   THE 500-PERSON GPS SPOOFING RING FAILS ON 5 INDEPENDENT DIMENSIONS:
