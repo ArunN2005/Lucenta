@@ -350,49 +350,134 @@ We call this the Two-Key Rule. Every covered disruption requires two independent
 
 ## AI/ML: What We're Actually Building
 
-Honest about this: we're not claiming a fully trained production ML system in 6 weeks. We're committing to a working implementation with real logic and real training where possible, clearly labeled mocks where we hit API walls.
+Honest about this: we're not claiming a fully trained production ML system in 6 weeks. We're committing to a working implementation with real logic and real training where possible, with clearly labelled mocks where we hit API walls.
 
-### 1. Risk Profiling Model
+One thing we want to be upfront about: **the Two-Key Rule trigger logic is deliberately rule-based, not ML.** In insurance, the decision to pay someone needs to be auditable and explainable — a regulator or a worker asking "why didn't I get paid?" deserves a clear answer, not "the model said so." Rules give us that. ML sits around the rules to catch what rules can't — anomalies, patterns, fraud signals — but the core trigger decision stays deterministic and inspectable.
 
-**Algorithm:** XGBoost classifier  
-**Training data:** Historical IMD disruption frequency by zone (public, downloadable), zone demographic data, seasonal patterns  
-**Input features at inference:** zone disruption history (24 months), zone type, seasonal week index, dark store tier  
-**Output:** Coverage multiplier 0.7x–1.4x applied to the worker's cap
+Here's where ML actually lives in our system:
 
-### 2. Trigger Validation Engine
+---
 
-Rule-based at the top level (auditable, explainable), with an Isolation Forest running in parallel to catch anomalous claim distributions:
+### 1. Risk Profiling Model — XGBoost Classifier
+
+**What it does:** Assigns a zone-level risk multiplier to each worker at onboarding, re-evaluated every Monday before the new week's premium is deducted.
+
+**Algorithm:** XGBoost — chosen because the feature set is tabular with a mix of numerical and categorical inputs, and XGBoost handles this well without needing extensive preprocessing. Also fast enough to run inference at premium renewal time without adding latency.
+
+**Training data:** Historical IMD disruption event logs by PIN code (publicly available, 24 months), BBMP waterlogging complaint data, zone type classifications, platform downtime incident reports (estimated from public sources where APIs aren't available).
+
+**Input features at inference:**
+
+| Feature | Type | Description |
+|---|---|---|
+| `zone_disruption_count_12m` | Numerical | Number of red-alert events in the zone in the last 12 months |
+| `zone_disruption_count_24m` | Numerical | Same, 24-month window |
+| `zone_type` | Categorical | Residential dense / commercial / mixed / industrial |
+| `dark_store_tier` | Categorical | Zepto Gold / Standard / Blinkit Express |
+| `seasonal_week_index` | Numerical | Week of year (1–52), captures monsoon/summer cycles |
+| `worker_income_variance` | Numerical | Std dev of weekly earnings over past 8 weeks |
+| `worker_tenure_weeks` | Numerical | How long the worker has been on the platform |
+| `historical_claim_rate` | Numerical | Worker's own past claim frequency (0 at onboarding) |
+
+**Output:** A multiplier between 0.7x and 1.4x applied to the worker's coverage cap for that week. The base premium stays fixed — only the cap shifts.
+
+**Why not adjust the premium itself?** We tested this framing with riders we spoke to. A premium that changes week to week creates anxiety — workers stop trusting the product. A fixed price with a transparently explained cap adjustment is something they can understand and plan around.
+
+---
+
+### 2. Trigger Validation — Rules Engine + Isolation Forest
+
+The core Two-Key Rule is deterministic and intentionally so:
 
 ```
-  IF   weather_signal_A == CONFIRMED
-  AND  platform_volume_drop >= threshold    ← Signal B
-  AND  worker_was_active_before_event       ← Prevents opportunistic claims
+  IF   signal_A_confirmed (weather/civic threshold crossed)
+  AND  signal_B_confirmed (platform order volume drop ≥ threshold)
+  AND  worker_was_active_in_30min_before_event
   THEN
-       IF disruption is zone-wide (not individual)
+       IF zone_claim_penetration > 40%   ← systemic, not individual
             → TRIGGER PAYOUT FLOW
-       ELSE → FLAG FOR REVIEW
+       ELSE → FLAG FOR INDIVIDUAL REVIEW
 ```
 
-### 3. Payout Calculation
+**Where ML enters:** An **Isolation Forest** runs in parallel on the real-time claim stream per zone. It's trained on historical "normal disruption" claim distributions — what the temporal spread, claim count, and zone penetration rate look like during genuine events. When a new disruption triggers claims, the Isolation Forest scores how anomalous the current distribution is relative to that baseline.
 
-```
-  Payout = min(
-      worker_avg_hourly_income × disrupted_hours,
-      tier_coverage_cap
-  ) × severity_multiplier
+It doesn't block payouts on its own. It raises a flag that feeds into the fraud scoring pipeline below. The Two-Key Rule fires first; the Isolation Forest tells us whether what's happening looks statistically normal for a real disruption.
 
-  Severity multipliers:
-      Full zone shutdown   →  1.0×
-      Platform outage      →  0.7×
-      Partial disruption   →  0.5×
-```
+---
 
-### 4. Fraud Detection (Phase 2 Build)
+### 3. Sensor Fusion Fraud Classifier — Random Forest
 
-Three ML components — full design in the adversarial section:
-- Device sensor fusion model (accelerometer + gyroscope + barometric + network)
-- Social graph anomaly detector (ring detection via graph clustering)
-- Historical behavioral comparator (baseline deviation detection)
+This is the model we were previously vague about. Here's the full specification.
+
+**What it does:** Scores each claim on a 0–1 probability that the worker was genuinely present in the disruption zone. 0 = almost certainly at home spoofing. 1 = all signals consistent with genuine stranding.
+
+**Algorithm:** Random Forest classifier — chosen over a neural net because the feature set is small and structured, interpretability matters (we need to be able to explain a flag to an ops reviewer), and Random Forests are robust to missing features (a worker's barometric sensor might be unavailable on some devices).
+
+**Training data:** This is the bootstrapping problem we're honest about. Initially we train on simulated sessions — we generate "genuine stranding" sessions by sampling from workers who were confirmed active during past documented disruptions, and "spoofing" sessions by sampling from workers whose GPS and cell tower data showed the mismatch pattern. As real fraud cases are confirmed, those replace the simulated data progressively.
+
+**Input features:**
+
+| Feature | Window | Description |
+|---|---|---|
+| `accel_variance_10m` | 10 min pre/during | Std dev of accelerometer magnitude — but NOT used as primary signal. A sheltering worker is also still. Used in combination only. |
+| `baro_delta_from_baseline` | 30 min | Pressure drop vs worker's own recent baseline. Storm systems cause measurable drops. |
+| `baro_matches_zone_stations` | At trigger time | Does the device barometric reading match nearby IMD station readings? |
+| `network_signal_std` | 10 min during | Std dev of RSSI — towers genuinely degrade in heavy rain (rain fade). |
+| `cell_tower_zone_match` | At trigger time | Boolean — does the registered tower's coverage area match the claimed disruption zone? |
+| `gps_to_tower_distance_km` | At trigger time | Distance between GPS-reported location and cell tower's known coordinates. >2km = anomalous. |
+| `platform_activity_pre_event` | 30 min before | Was the worker accepting/completing orders before the disruption? |
+| `platform_silence_post_event` | 30 min after | Did activity drop after the event, or was it already silent before? |
+| `battery_drain_delta` | 10 min | Drain rate vs worker's own recent baseline. Outdoor network stress elevates this. |
+
+**Why accelerometer isn't the lead signal:** A rider sheltering under an awning is stationary. So is a spoofer at home. Accelerometer variance alone is a weak discriminator for still-but-genuine workers. It contributes to the ensemble but the cell tower match, barometric delta, and platform activity sequence carry far more weight. The Random Forest learns these weights from training data rather than us hardcoding them — which is one good reason to use ML here instead of rules.
+
+**Output:** Fraud probability score 0.0–1.0, fed into the three-tier routing decision alongside the Isolation Forest anomaly score.
+
+---
+
+### 4. Civic Disruption NLP Classifier — Fine-tuned DistilBERT
+
+We previously said "news NLP feed" without specifying what that meant. Here's what it actually is.
+
+**What it does:** Classifies incoming news headlines and government alert text into: `[NO_DISRUPTION, CURFEW, STRIKE, ZONE_CLOSURE, OTHER_DISRUPTION]`, and extracts the affected zone (PIN code or area name) and estimated severity.
+
+**Algorithm:** DistilBERT fine-tuned on a labelled dataset of Indian news headlines — specifically regional language and English headlines from sources like Times of India, The Hindu, NDTV, and state government alert RSS feeds. DistilBERT is the right choice here: it's small enough to run inference in real-time (not just batch), handles the mixed formal/informal language of Indian news well, and doesn't need the full BERT parameter count for a classification task this narrow.
+
+**Training data:** We'll build a labelled dataset from archived news headlines tagged with known disruption events — cross-referencing dates and zones where we have ground truth (historical flood events, documented curfews, known strikes). Starting target: ~3,000 labelled examples across the five classes. Achievable in Phase 2 with semi-automated labelling.
+
+**Input:** Raw headline or alert text string + source metadata (publication, timestamp, region tag if available).
+
+**Output:** `{ disruption_type: "CURFEW", confidence: 0.91, extracted_zone: "HSR Layout", severity: "HIGH" }` — this structured output then feeds into the Two-Key Rule engine as Signal A for civic disruptions.
+
+**Why not just keyword matching?** We started with keyword matching ("curfew", "Section 144", "bandh", "strike") and it works for obvious cases. But Indian news headlines are inconsistent — "movement restrictions imposed" doesn't contain "curfew" but means the same thing. A classifier generalises across phrasings; keywords miss the long tail.
+
+---
+
+### 5. Social Graph Ring Detector — Graph-based Anomaly Detection
+
+**What it does:** Detects coordinated fraud rings by identifying densely connected subgraphs within the worker network whose claim timing and zone behaviour are statistically anomalous.
+
+**Algorithm:** We build the worker graph using NetworkX. Each worker is a node; edges represent shared dark store affiliation, overlapping delivery zone history, and (with consent) Bluetooth/WiFi proximity logs. When a disruption triggers a cluster of claims, we run a **community detection algorithm** (Louvain method) on the subgraph of claimants to see if they form an unusually tight community relative to the broader zone population.
+
+We then compute a **graph anomaly score** by comparing the claimant subgraph's density and clustering coefficient against the expected distribution for a random sample of the same size from the zone's worker population. A genuine disruption affects a geographically spread, socially sparse set of workers — their subgraph looks like the general population. A fraud ring looks like a clique.
+
+**Not deep learning.** We considered GNNs (Graph Neural Networks) but they're overkill for a graph this size (30–80 workers per zone) and would require labelled graph-level training data we don't have yet. Louvain + statistical comparison is implementable now, interpretable, and effective at the scale we're operating.
+
+---
+
+### ML Component Summary
+
+| Component | Algorithm | Genuinely ML? | Phase |
+|---|---|---|---|
+| Zone risk profiling | XGBoost classifier | Yes | Phase 1 (train), Phase 2 (deploy) |
+| Claim distribution anomaly | Isolation Forest | Yes | Phase 2 |
+| Sensor fusion fraud scoring | Random Forest classifier | Yes | Phase 2 |
+| Civic disruption detection | Fine-tuned DistilBERT | Yes | Phase 2 |
+| Social graph ring detection | Louvain + graph statistics | Partially (graph algorithms) | Phase 3 |
+| Two-Key Rule trigger | Deterministic rules | No — intentionally | Phase 2 |
+| Payout calculation | Formula | No — intentionally | Phase 2 |
+
+The last two being rule-based is a deliberate design choice, not a gap. The ones above them being ML is where the system actually learns and adapts.
 
 ---
 
@@ -545,7 +630,7 @@ What we're actually going to use — not an aspirational list.
 | Primary DB | PostgreSQL | Policies, workers, claims, zones, audit logs. |
 | Cache / State | Redis | Real-time trigger state, session management, rate limiting. |
 | Event Stream | Apache Kafka | Disruption signals fan out to multiple consumers and can't be dropped. |
-| ML Models | XGBoost + Isolation Forest (scikit-learn) | Risk profiling + anomaly detection. Both deployed as FastAPI endpoints. |
+| ML Models | XGBoost, Random Forest, Isolation Forest, DistilBERT, NetworkX + Louvain (scikit-learn + HuggingFace) | Five distinct models each doing a specific job. All served as FastAPI endpoints. |
 | Weather APIs | IMD + OpenWeatherMap + AQICN | IMD primary. OWM backup. Mocked where rate-limited. |
 | Platform APIs | Zepto / Blinkit mock | No partner API access yet. Simulated accurately. |
 | Payments | Razorpay test mode + UPI sandbox | Sandbox through Phase 2. |
@@ -577,17 +662,24 @@ We knew this before the Market Crash scenario — it's why the Two-Key Rule exis
 
 A delivery partner genuinely stranded in a flood zone looks very different from someone sitting at home with a spoofing app — not on GPS, but on **everything else**.
 
-**Device sensor behavior**
+**Device sensor behavior — the Random Forest sees all of these together**
 
-| Signal | Genuinely Stranded | GPS Spoofer at Home |
-|---|---|---|
-| **Accelerometer** | Irregular micro-movement — rain vibration, sheltering, bike leaning | Near-zero variance. Phone sitting still on a table. |
-| **Gyroscope** | Frequent orientation shifts — checking app, looking around | Flat. No rotation at all. |
-| **Barometric sensor** | Pressure drop matching the storm system | Normal indoor pressure. |
-| **Network signal strength** | Degraded or fluctuating (tower interference in heavy rain) | Full bars, stable. No interference. |
-| **Battery drain** | Elevated — GPS + network retries under bad signal | Normal baseline drain rate. |
+One clarification upfront: a rider sheltering from rain under an awning is also stationary. So accelerometer alone is a weak signal — a still genuine worker and a still spoofer look the same on that single dimension. Our Random Forest classifier doesn't treat any sensor as independently decisive. It learns the weighted combination from training data. The features that carry the most weight in practice are the ones that are hardest to fake:
 
-We build a "stranded behavioral fingerprint" from the combination. No single sensor is conclusive — the combination is what's very hard to fake without actually being outside in the disruption.
+| Signal | Genuinely Stranded | GPS Spoofer at Home | Fakeable? |
+|---|---|---|---|
+| **Cell tower zone match** | Tower covers the disruption zone | Tower is in a different neighbourhood entirely | No — physics |
+| **Barometric pressure delta** | Pressure drops matching the storm system passing overhead | Normal indoor pressure — no storm overhead | No — requires physical presence |
+| **Barometric vs IMD station match** | Device reading matches nearby IMD weather station | Mismatch — different location, different pressure | No — requires physical presence |
+| **Network signal std dev** | Fluctuating — rain fade on towers causes interference | Stable full bars at home | Hard to fake |
+| **Platform activity sequence** | Active before event, silent after | Silent or spoofing app active before weather alert | Hard to fake |
+| **GPS-to-tower distance** | GPS and cell tower point to same zone | GPS says flood zone, tower says home | No — physics |
+| **Accelerometer variance** | Low to moderate — sheltering workers are also still | Near-zero — but this is a weak signal on its own | Easy to fake |
+| **Battery drain delta** | Elevated — network stress + GPS under bad signal | Normal baseline | Moderate difficulty |
+
+The accelerometer is in the model but it's a low-weight feature. The cell tower match and barometric delta are the hard signals — they require physical presence and cannot be faked in software. The Random Forest learns these relative importances from training data rather than us hardcoding them, which is the right reason to use ML here instead of a rules engine.
+
+We build a fraud probability score 0.0–1.0 from all features combined. This score feeds directly into the three-tier routing: low → auto-approve, medium → soft hold, high → hard flag. Full model specification is in the AI/ML section above.
 
 **Platform activity timeline**
 
