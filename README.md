@@ -485,7 +485,7 @@ The last two being rule-based is a deliberate design choice, not a gap. The ones
 
 > The full system, from signal ingestion to payout disbursement.
 
-![Kavach Architecture](https://ibb.co/Y735vVVG)
+![Kavach Architecture](https://i.ibb.co/27yzXppB/Kavach-Archi-New.png)
 
 ### The Two-Key Rule — Visualized
 
