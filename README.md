@@ -419,7 +419,7 @@ This is the model we were previously vague about. Here's the full specification.
 
 | Feature | Window | Description |
 |---|---|---|
-| `accel_variance_10m` | 10 min pre/during | Std dev of accelerometer magnitude — but NOT used as primary signal. A sheltering worker is also still. Used in combination only. |
+| `accel_variance_10m` | 10 min pre/during | Std dev of accelerometer magnitude — not a primary signal. A sheltering worker is also still. Used in combination only. |
 | `baro_delta_from_baseline` | 30 min | Pressure drop vs worker's own recent baseline. Storm systems cause measurable drops. |
 | `baro_matches_zone_stations` | At trigger time | Does the device barometric reading match nearby IMD station readings? |
 | `network_signal_std` | 10 min during | Std dev of RSSI — towers genuinely degrade in heavy rain (rain fade). |
@@ -428,10 +428,58 @@ This is the model we were previously vague about. Here's the full specification.
 | `platform_activity_pre_event` | 30 min before | Was the worker accepting/completing orders before the disruption? |
 | `platform_silence_post_event` | 30 min after | Did activity drop after the event, or was it already silent before? |
 | `battery_drain_delta` | 10 min | Drain rate vs worker's own recent baseline. Outdoor network stress elevates this. |
+| `wifi_ssid_zone_match` ⚗️ | At trigger time | **Experimental.** Count of WiFi SSIDs visible to the device that match the zone's known fingerprint database. A spoofer at home sees their home networks — none of which exist in HSR Layout. |
+| `wifi_bssid_zone_match` ⚗️ | At trigger time | **Experimental.** Same as above but using BSSID (router hardware ID) — more precise than SSID since SSIDs can be duplicated. |
+| `bluetooth_mac_zone_match` ⚗️ | At trigger time | **Experimental.** Count of Bluetooth device MACs visible that appear in the zone's baseline. Persistent devices like shop scanners, fixed IoT devices, ATMs appear reliably at their locations. |
 
 **Why accelerometer isn't the lead signal:** A rider sheltering under an awning is stationary. So is a spoofer at home. Accelerometer variance alone is a weak discriminator for still-but-genuine workers. It contributes to the ensemble but the cell tower match, barometric delta, and platform activity sequence carry far more weight. The Random Forest learns these weights from training data rather than us hardcoding them — which is one good reason to use ML here instead of rules.
 
 **Output:** Fraud probability score 0.0–1.0, fed into the three-tier routing decision alongside the Isolation Forest anomaly score.
+
+---
+
+### 3a. Experimental — WiFi & Bluetooth Location Fingerprinting
+
+> ⚗️ **This feature is not in the current architecture diagram.** We're documenting it here as a planned experimental addition for Phase 3, inspired by prior art from Incognia's location behavioral analytics approach. It will be validated before being added to the main fraud scoring pipeline.
+
+**The idea:** Location isn't just a GPS coordinate. Every physical location has a unique ambient radio environment — a set of WiFi networks and Bluetooth devices visible from that spot that doesn't exist anywhere else. We can fingerprint a zone using this radio environment and use mismatches as a GPS spoofing signal that's completely independent of GPS itself.
+
+**How we'd build the zone fingerprint database:**
+
+Every time a confirmed-genuine worker checks in at their dark store zone (verified by actual completed orders), the app takes a passive radio scan:
+- All WiFi SSIDs + BSSIDs visible (using `WifiManager` — no connection needed)
+- All Bluetooth device MACs visible (using `BluetoothAdapter.startDiscovery()`)
+
+Over multiple shifts across 30–80 riders, the zone accumulates a stable fingerprint. Persistent signals (the dark store's own WiFi, nearby shop routers, fixed Bluetooth devices like scanners and payment terminals) appear reliably. We store this as a per-zone set with frequency weights — signals seen on 80%+ of scans get high weight, occasional ones get low weight.
+
+**At claim time:**
+
+```
+  Zone HSR Layout fingerprint (known):
+    SSIDs:    ["Zepto_Store_5G", "KFC_Guest", "HDFC_ATM_BT"]
+    BSSIDs:   ["a4:3e:51:...", "bc:f6:85:...", "00:1a:2b:..."]
+
+  Spoofer's device scan (from Whitefield):
+    SSIDs:    ["Jio_Home_4G", "ACT_Fibernet_99", "Samsung_TV"]
+    BSSIDs:   ["d8:47:32:...", "f0:2f:74:...", "44:65:0d:..."]
+
+  Match score: 0 / 12  →  HARD fraud signal
+```
+
+**Why this is stronger than barometric pressure alone:**
+
+Barometric pressure tells you a storm is overhead — it's a good signal but a spoofer near the zone boundary could get a similar reading. WiFi/Bluetooth fingerprints are **hyperlocal to within 50–100 metres**. You can't see HSR Layout's networks from 500m away, let alone from Whitefield. The radio fingerprint is essentially a physical proof-of-presence certificate.
+
+This is the same core mechanism Incognia uses for location behavioral analytics — we're applying it specifically to the one-time event verification problem rather than their persistent identity use case.
+
+**The bootstrapping caveat:** The zone fingerprint database needs enough genuine check-ins before it's reliable. New zones start with `wifi_bssid_zone_match` weighted near-zero in the Random Forest and the weight increases as the fingerprint database matures. We won't use this signal to hard-flag anyone until a zone has at least 50 genuine scan contributions. This is documented in the model training pipeline and flagged in the ops dashboard.
+
+**Android permissions required:**
+- `ACCESS_WIFI_STATE` — scan visible networks (no connection needed)
+- `ACCESS_FINE_LOCATION` — required for WiFi scan results on Android 9+
+- `BLUETOOTH_SCAN` — scan nearby Bluetooth devices
+
+All standard for a location-based app. The permission rationale ("we verify your location during disruptions to process your payout") is honest and explainable to users.
 
 ---
 
@@ -474,10 +522,11 @@ We then compute a **graph anomaly score** by comparing the claimant subgraph's d
 | Sensor fusion fraud scoring | Random Forest classifier | Yes | Phase 2 |
 | Civic disruption detection | Fine-tuned DistilBERT | Yes | Phase 2 |
 | Social graph ring detection | Louvain + graph statistics | Partially (graph algorithms) | Phase 3 |
+| WiFi/Bluetooth fingerprinting ⚗️ | Zone radio fingerprint matching | Yes (feature engineering + RF) | Phase 3 — experimental |
 | Two-Key Rule trigger | Deterministic rules | No — intentionally | Phase 2 |
 | Payout calculation | Formula | No — intentionally | Phase 2 |
 
-The last two being rule-based is a deliberate design choice, not a gap. The ones above them being ML is where the system actually learns and adapts.
+The last two being rule-based is a deliberate design choice, not a gap. The ones above them being ML is where the system actually learns and adapts. The ⚗️ entry is experimental — planned for Phase 3 validation before inclusion in the main scoring pipeline.
 
 ---
 
@@ -485,7 +534,7 @@ The last two being rule-based is a deliberate design choice, not a gap. The ones
 
 > The full system, from signal ingestion to payout disbursement.
 
-![Kavach Architecture](https://i.ibb.co/27yzXppB/Kavach-Archi-New.png)
+![Kavach Architecture](assets/Kavach_Archi_New.png)
 
 ### The Two-Key Rule — Visualized
 
