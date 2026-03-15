@@ -705,7 +705,7 @@ The syndicates exploited a system that trusted a single signal. We never did.
 
 *Phase 2 code will be in this same repo. This README will grow with the build.*
 
-**Team:** [Your Team Name]  
-**Demo Video:** [Link]
+**Team:** Lucenta  
+**Demo Video:** [Watch Here](https://drive.google.com/drive/folders/13lFUkyhXIPRCUWU_shfOSvRg2eSPcr5_)
 
 </div>
