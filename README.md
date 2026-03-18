@@ -160,32 +160,7 @@ The math made the choice for us.
 
 ## Meet Arjun — Our Primary Persona
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                                                                     │
-│   ARJUN, 27                              Zepto · HSR Layout         │
-│   Delivery Partner                       Bengaluru, Karnataka       │
-│                                                                     │
-│   ₹650 / day avg          10 AM – 11 PM shift                      │
-│   ₹4,500 / week           Peak earning: 6 – 10 PM                  │
-│   Supports family of 3    14 months on platform                     │
-│                                                                     │
-│   ────────────────────────────────────────────────────────────      │
-│                                                                     │
-│   "November 2023 floods. Lost ₹3,200 in four days.                 │
-│    Found out from the WhatsApp group. No notification,              │
-│    no compensation, nothing. I just had less money."                │
-│                                                                     │
-│   ────────────────────────────────────────────────────────────      │
-│                                                                     │
-│   WHAT HE NEEDS           WHAT HE DOESN'T NEED                     │
-│   · ₹7/day or less        · Monthly premiums                       │
-│   · Zero-touch payout     · Health/accident cover                  │
-│   · UPI, not promises     · Agent calls or forms                   │
-│   · Income protection     · Vehicle repair cover                   │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
+![Arjun — Primary Persona](assets/arjun.png)
 
 Arjun is not an abstraction. He's a composite of conversations we had with actual riders near our campus. The ₹3,200 number, the WhatsApp group detail, the "no notification" — these are real.
 
@@ -193,19 +168,9 @@ Arjun is not an abstraction. He's a composite of conversations we had with actua
 
 ## How Kavach Works
 
-The entire product can be described in three words:
+The entire product can be described in three words: **Detect. Decide. Disburse.**
 
-```
-  ┌──────────────┐       ┌──────────────┐       ┌──────────────┐
-  │              │       │              │       │              │
-  │    DETECT    │ ───▶  │    DECIDE    │ ───▶  │   DISBURSE   │
-  │              │       │              │       │              │
-  │  Real-time   │       │  AI validates│       │  UPI payout  │
-  │  disruption  │       │  claim in    │       │  in < 90s    │
-  │  monitoring  │       │  < 90 secs   │       │  No action   │
-  │              │       │              │       │  from worker │
-  └──────────────┘       └──────────────┘       └──────────────┘
-```
+![How Kavach Works](assets/howitworks.png)
 
 We monitor external disruption signals continuously. When a threshold is crossed and confirmed by a second independent signal (our Two-Key Rule), the system classifies it as a covered disruption, calculates what Arjun would have earned in that window based on his 4-week income average, and pushes the payout to his UPI.
 
@@ -215,41 +180,11 @@ He never filed anything. He never called anyone.
 
 **Not covered — and we mean it:** Health. Accidents. Vehicle damage. Life cover. This is in the product design, not the fine print.
 
-### Onboarding — Target: Under 5 Minutes
+### Onboarding & Weekly Cycle
 
-```
-  STEP 1          STEP 2          STEP 3          STEP 4
-  ┌──────┐        ┌──────┐        ┌──────┐        ┌──────┐
-  │      │        │  QR  │        │ Zone │        │ Risk │
-  │Phone │ ──▶    │ Scan │ ──▶    │ Auto │ ──▶    │ Tier │
-  │+ OTP │        │      │        │ Det. │        │ Pick │
-  └──────┘        └──────┘        └──────┘        └──────┘
-   ~45s            ~30s            instant         ~60s
+![Getting Started — Onboarding & Weekly Cycle](assets/gettingstarted.png)
 
-  STEP 5          STEP 6          STEP 7
-  ┌──────┐        ┌──────┐        ┌──────┐
-  │Income│        │ UPI  │        │      │
-  │ Base │ ──▶    │  ₹1  │ ──▶    │ LIVE │
-  │ line │        │Test  │        │      │
-  └──────┘        └──────┘        └──────┘
-   ~60s            ~30s            Done
-```
-
-No documents. No selfie-with-ID. No agent visit.
-
-### Weekly Cycle
-
-```
-   MON          TUE — SUN           SUN             MON
-  00:00                            23:59           00:00
-    │                                │               │
-    ▼                                ▼               ▼
-  Premium ─────── Coverage Active ─────── Week   Premium
-  deducted        ₹29 / ₹49 / ₹79         Closes  re-eval
-  auto                                             + new week
-```
-
-Monday start is deliberate — Q-Commerce platform payouts settle Monday/Tuesday. The worker has money in hand when the premium comes out.
+No documents. No selfie-with-ID. No agent visit. Monday start is deliberate — Q-Commerce platform payouts settle Monday/Tuesday. The worker has money in hand when the premium comes out.
 
 ---
 
@@ -309,6 +244,8 @@ Weekly pricing means the premium comes out of money he already has, covering the
 
 Kavach Plus at ₹7/day = less than one auto ride to the dark store.
 
+![Weekly Premium Tiers](assets/weeklypremium.png)
+
 ### How AI Adjusts Coverage (Not Price)
 
 We kept prices fixed and visible. Arjun doesn't need a premium that fluctuates — that creates anxiety and erodes trust. What the AI adjusts is the **coverage cap**, not the price.
@@ -345,6 +282,8 @@ We call this the Two-Key Rule. Every covered disruption requires two independent
 | Platform outage | API heartbeat failure > 20 min | Worker app showing 0 available orders | 70% |
 
 **Why platform order volume as Signal B?** This is the part we haven't seen done elsewhere. Traditional parametric systems only use weather APIs. But if Zepto orders are flowing despite bad weather, riders are clearly still working. The demand signal closes the loop that weather data alone can't — and it also makes GPS spoofing ineffective. You can fake a GPS location. You can't fake Zepto's order volume being down 75%.
+
+![The Two-Key Rule](assets/twokey.png)
 
 ---
 
@@ -536,42 +475,6 @@ The last two being rule-based is a deliberate design choice, not a gap. The ones
 
 ![Kavach Architecture](assets/Kavach_Archi_New.png)
 
-### The Two-Key Rule — Visualized
-
-```
-  SIGNAL A            SIGNAL B
-  (Weather/Civic)     (Platform Demand)
-       │                    │
-       ▼                    ▼
-   IMD alerts          Zepto order
-   cross threshold     volume drops
-       │                70%+ in zone
-       │                    │
-       └────────┬───────────┘
-                │
-                ▼
-         BOTH CONFIRMED?
-          /            \
-        YES              NO
-         │                │
-         ▼                ▼
-    Disruption         No trigger.
-    classified         Log signal,
-         │             watch for
-         ▼             second key.
-    Fraud check
-    (sensor + graph)
-         │
-    ┌────┴─────────────────────────┐
-    │           │                  │
-    ▼           ▼                  ▼
-  AUTO        SOFT              HARD
- APPROVE      HOLD              FLAG
-  <90s        4hrs              Review
-  UPI out    then auto          + geo
-             release            video
-```
-
 ---
 
 ## Why Mobile, Not Web
@@ -753,38 +656,7 @@ Fraudsters want maximum payout. We flag workers who upgrade from Kavach Basic to
 
 This is the hardest part. Bad weather causes real network problems — dropped GPS lock, degraded signal, unreliable sensor readings. A genuine worker in a flood zone shouldn't lose his ₹320 because his phone's GPS was spotty.
 
-```
-  ┌─────────────────────────────────────────────────────────────────┐
-  │                  THREE-TIER CLAIM STATUS                        │
-  ├─────────────────────────────────────────────────────────────────┤
-  │                                                                 │
-  │  ✓  AUTO-APPROVED                                               │
-  │     All signals consistent.                                     │
-  │     UPI payout in < 90 seconds.                                 │
-  │                                                                 │
-  ├─────────────────────────────────────────────────────────────────┤
-  │                                                                 │
-  │  ~  SOFT HOLD                                                   │
-  │     1–2 signals anomalous, rest consistent.                     │
-  │     Payout held for 4 hours, then auto-released                 │
-  │     if no new anomalies appear.                                 │
-  │     Worker sees: "Verifying your coverage —                     │
-  │     you'll receive your payout within 4 hours."                 │
-  │     (Not "suspected of fraud." Just "verifying.")               │
-  │                                                                 │
-  ├─────────────────────────────────────────────────────────────────┤
-  │                                                                 │
-  │  ✗  HARD FLAG                                                   │
-  │     Multiple signals inconsistent.                              │
-  │     Payout withheld.                                            │
-  │     Worker gets a calm, non-accusatory message:                 │
-  │     "We couldn't automatically verify your location.            │
-  │      Please record a quick 10-second video from                 │
-  │      where you are. We'll review within 2 hours."              │
-  │     Geo-tagged video is the final verification layer.           │
-  │                                                                 │
-  └─────────────────────────────────────────────────────────────────┘
-```
+![Fraud Detection — Three-Tier Claim Routing](assets/frauddetection.png)
 
 **Why the 4-hour hold works against fraudsters more than honest workers:**
 
