@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Kavach",
+    "slug": "kavach",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/kavachlogo.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/kavachlogo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D1B2A"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.kavach.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/kavachlogo.png",
+        "backgroundColor": "#0D1B2A"
+      },
+      "package": "com.kavach.app"
+    },
+    "web": {
+      "favicon": "./assets/kavachlogo.png"
+    }
+  }
+}
