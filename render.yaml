@@ -1,0 +1,64 @@
+services:
+  - type: web
+    name: kavach-backend
+    env: node
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node src/index.js
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kavach-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: kavach-redis
+          property: connectionString
+      - key: DEMO_MODE
+        value: true
+      - key: ML_SERVICE_URL
+        value: https://kavach-ml-service.onrender.com
+      - key: MOCK_PLATFORM_API_URL
+        value: https://kavach-mock-api.onrender.com
+
+  - type: web
+    name: kavach-ml-service
+    env: python
+    region: singapore
+    plan: free
+    rootDir: ml-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: PORT
+        value: 5000
+
+  - type: web
+    name: kavach-mock-api
+    env: node
+    region: singapore
+    plan: free
+    rootDir: mock-platform-api
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: PORT
+        value: 4000
+
+  - type: redis
+    name: kavach-redis
+    region: singapore
+    plan: free
+    ipAllowList: []
+
+databases:
+  - name: kavach-db
+    databaseName: kavach
+    user: kavach
+    region: singapore
+    plan: free
