@@ -22,11 +22,33 @@
 
 </div>
 
----
+## 🚀 Quick Start for Judges & Developers
 
-We've been thinking about this problem for a while — not just as a hackathon prompt, but as something we've genuinely observed. One of our team members spent time talking to Zepto delivery partners near our college campus during last year's monsoon. The thing that stuck with us: these guys were losing ₹600–₹800 on a single bad-weather day, and their only "backup plan" was to not eat out that week.
+We built our backend using Node.js, PostgreSQL, Redis, and a Python Machine Learning layer. Our frontend is a React Native (Expo) mobile application.
 
-That conversation is what Kavach is built from.
+To evaluate this project locally with **one click**, use the automated boot script provided!
+
+### 1. The Zero-Friction Local Run (Windows)
+
+We have created an automated script that starts up the databases, backend services, the ML risk model, the mock platform API, and the mobile bundler automatically.
+
+1. Open up a PowerShell terminal in the `kavach/` root directory.
+2. Ensure you have **Docker Desktop** running (for Postgres & Redis) and Node.js + Python installed.
+3. Run the start script:
+   ```powershell
+   .\start-dev.ps1
+   ```
+4. The script will automatically boot up all 5 microservices in separate windows.
+5. In the terminal running the `mobile` app, press **`a`** to open the app in an Android Emulator, or scan the QR code with the **Expo Go** app on your physical phone (make sure your phone is on the same WiFi network).
+
+*When you are done testing, simply run `.\stop-dev.ps1` to clean up all Background processes and Docker containers.*
+
+### 2. Accessing the Pre-Built APK
+
+If you prefer to directly try the pre-compiled Android App:
+> **Download APK**: [Link to APK - Insert Cloud Hosted Link Here]
+
+***Important Note on APK Deployment***: *An APK is strictly the mobile frontend. For the APK to work "out of the box" on a judge's phone without the `start-dev.ps1` script running, the backend services (Postgres, Node, Redis, Python) need to be deployed to the cloud (e.g. Render, Railway, AWS). Our mobile app relies on live polling and real-time socket updates for Demo disruptions, which means the API must be reachable over the internet.*
 
 ---
 
