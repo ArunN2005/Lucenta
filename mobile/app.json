@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Kavach",
+    "slug": "kavach",
+    "scheme": "kavach",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "android": {
+      "package": "com.kavach.app"
+    },
+    "extra": {
+      "API_BASE_URL": "http://192.168.1.2:3000/api",
+      "MOCK_PLATFORM_API_URL": "http://192.168.1.2:3001"
+    },
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}

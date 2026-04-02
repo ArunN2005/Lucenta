@@ -1,0 +1,18 @@
+﻿[
+    {
+        "name":  "backend",
+        "id":  3312
+    },
+    {
+        "name":  "ml-service",
+        "id":  11528
+    },
+    {
+        "name":  "mock-platform-api",
+        "id":  3968
+    },
+    {
+        "name":  "mobile",
+        "id":  15980
+    }
+]
