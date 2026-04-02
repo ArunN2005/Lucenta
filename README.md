@@ -1,89 +1,711 @@
-# Kavach
+<!--
+  ╔══════════════════════════════════════════════════════════╗
+  ║            KAVACH — DEVTRAILS 2026 | PHASE 1            ║
+  ║     Parametric Income Insurance · Q-Commerce Workers     ║
+  ╚══════════════════════════════════════════════════════════╝
+-->
 
-Kavach is a parametric income insurance platform for Q-commerce delivery workers, built for automatic disruption payouts. It uses a Two-Key Rule where two independent signals confirm a disruption before any payout is initiated. Riders do not file claims; policy checks, disruption detection, claim creation, payout simulation, and notifications are all automated.
+<div align="center">
 
-## Folder Structure
+![Kavach Logo](assets/kavachlogo.png)
 
-- mobile: React Native + Expo app (Android-first)
-- backend: Node.js + Express API + trigger engine
-- ml-service: FastAPI + XGBoost risk multiplier service
-- mock-platform-api: Simulated platform telemetry API for Zepto/Blinkit demo triggers
-- docker-compose.yml: Local PostgreSQL + Redis
+### Parametric Income Insurance for India's Q-Commerce Delivery Workers
 
-## How To Run
+**Guidewire DEVTrails 2026 · Phase 1 · Ideation & Foundation**
 
-1. `docker-compose up -d`
-2. `cd backend && npm install && npm run dev`
-3. `cd ml-service && pip install -r requirements.txt && python train.py && uvicorn main:app --port 8001`
-4. `cd mock-platform-api && npm install && node index.js`
-5. `cd mobile && npm install && npx expo start`
+---
 
-## One-Command Local Startup (Windows)
+*When it rains in Bengaluru, 10-minute delivery still shows up at your door.*  
+*The person who brought it? He went home empty-handed.*
 
-To run the full local stack (postgres, redis, backend, ml-service, mock-platform-api, and mobile) in one shot:
+---
 
-1. `cd kavach`
-2. `./start-dev.ps1`
+</div>
 
-Note: Docker Desktop must be running before `./start-dev.ps1`. The script now exits early if Redis is not reachable.
+---
 
-To stop all processes started by that script:
+We've been thinking about this problem for a while — not just as a hackathon prompt, but as something we've genuinely observed. One of our team members spent time talking to Zepto delivery partners near our college campus during last year's monsoon. The thing that stuck with us: these guys were losing ₹600–₹800 on a single bad-weather day, and their only "backup plan" was to not eat out that week.
 
-1. `cd kavach`
-2. `./stop-dev.ps1`
+That conversation is what Kavach is built from.
 
-## Environment Variables
+---
 
-### backend/.env
+## Table of Contents
 
-- DATABASE_URL
-- REDIS_URL
-- OWM_API_KEY
-- RAZORPAY_KEY_ID
-- RAZORPAY_KEY_SECRET
-- MOCK_PLATFORM_API_URL
-- ML_SERVICE_URL
-- PORT
-- DEMO_MODE
+1. [Background Research — What We Studied First](#background-research--what-we-studied-first)
+2. [The Problem We're Actually Solving](#the-problem-were-actually-solving)
+3. [Why We Picked Q-Commerce](#why-we-picked-q-commerce)
+4. [Meet Arjun — Our Primary Persona](#meet-arjun--our-primary-persona)
+5. [How Kavach Works](#how-kavach-works)
+6. [Real Scenarios We Designed For](#real-scenarios-we-designed-for)
+7. [The Weekly Premium Model](#the-weekly-premium-model)
+8. [Parametric Triggers — The Two-Key Rule](#parametric-triggers--the-two-key-rule)
+9. [AI/ML: What We're Actually Building](#aiml-what-were-actually-building)
+10. [System Architecture](#system-architecture)
+11. [Why Mobile, Not Web](#why-mobile-not-web)
+12. [Tech Stack](#tech-stack)
+13. [Adversarial Defense & Anti-Spoofing Strategy](#adversarial-defense--anti-spoofing-strategy)
 
-Notes:
-- The included backend env is preconfigured for Supabase PostgreSQL with SSL handling enabled in code.
-- Docker PostgreSQL is optional if using Supabase directly.
+---
 
-### ml-service/.env
+## Background Research — What We Studied First
 
-- PORT=8001
+Before writing a single line of code or drawing a single diagram, we spent Week 1 trying to actually understand the problem space. Here's what we found — and what it changed about our thinking.
 
-### mobile/app.json extra
+### The Gig Economy Income Volatility Problem
 
-- API_BASE_URL (must be LAN IP reachable from Android device)
-- MOCK_PLATFORM_API_URL (must be LAN IP reachable from Android device)
+We started with the NITI Aayog's 2022 report on gig workers in India, which estimates **7.7 million gig workers** currently, projected to grow to **23.5 million by 2030**. Platform-based delivery workers represent the fastest-growing segment. The report also flags what it calls the "income volatility gap" — the absence of any financial protection for income disruptions that are external and uncontrollable.
 
-## Demo Walkthrough (90 sec)
+We then looked at IWWAGE's 2021 survey of platform delivery workers, which found:
+- Average monthly income of ₹14,000–₹18,000, with **20–30% monthly variance** due to disruptions
+- Only **4% of workers** have any form of income insurance
+- **67% reported losing income** due to weather in the past 6 months
+- When asked what would most improve their financial security, **"some income when I can't work due to rain/floods"** ranked higher than health benefits
 
-1. Open mobile app and register worker in any zone with tier.
-2. On Dashboard, tap Kavach logo 5 times to open Demo Panel.
-3. Select zone and trigger one scenario (Rain/Heat/Outage).
-4. Tap Force check now.
-5. Backend trigger engine validates Two-Key signals, creates disruption, finds active workers, creates claim, simulates payout, updates claim as paid, and sends push notification.
-6. Return to Dashboard/Claims and show payout reflected in UI.
+This last point is what started shaping our product direction. The instinct is to build health insurance for gig workers — that's what most proposals in this space do. But the workers themselves are telling us they want income protection first.
 
-## Key Endpoints
+### How Parametric Insurance Actually Works
 
-- POST /api/auth/register
-- GET /api/worker/:worker_id
-- GET /api/policy/:worker_id
-- POST /api/policy/renew/:worker_id
-- GET /api/claims/:worker_id
-- GET /api/disruptions/active
-- POST /api/worker/activity
-- GET /api/zones
-- POST /api/demo/force-trigger-check
-- GET /api/demo/trigger-status
+We spent time understanding the mechanics before assuming we could apply them here. Parametric insurance (also called index insurance) works differently from traditional insurance:
 
-## Notes
+**Traditional:** You suffer a loss → you file a claim → an adjuster verifies → payout (weeks/months later)
 
-- Trigger engine runs every 5 minutes (node-cron) and supports force-run endpoint for demo.
-- Duplicate disruptions are prevented for same zone and type within a 2-hour window.
-- Payout is capped at adjusted policy cap and rounded to nearest integer.
-- If Razorpay payout API is not available in test mode, payout is simulated and claim is marked paid.
+**Parametric:** A pre-defined external trigger is crossed → automatic payout (minutes/hours later)
+
+The key insight is that the payout isn't tied to your *actual* loss — it's tied to a *verified external event* that correlates strongly with loss. This eliminates the biggest costs in traditional insurance: claims processing, fraud investigation, and payout delay.
+
+We looked at real-world parametric insurance deployments:
+- **AXA's Fizzy** (flight delay insurance): pays automatically when FlightStats API confirms a delay >2 hours. No claims. No paperwork.
+- **IBISA** (smallholder crop insurance in Africa): uses satellite rainfall data. Farmers get paid when rainfall index drops below threshold. Zero claim filing.
+- **The Kenya Livestock Insurance Program**: uses satellite imagery of vegetation cover as a proxy for livestock mortality. Automatic payouts to herders.
+
+The pattern across all of these: **parametric works best when the loss is highly correlated with a measurable external event, and when the payout population shares similar loss profiles.** Delivery workers in a flood zone fit this exactly — when the zone floods, *everyone* in it loses income, and the income loss is roughly proportional to hours lost.
+
+### Why Existing Products Don't Fit
+
+We looked at every insurance product currently marketed to gig workers in India:
+
+| Product | Premium | Coverage | Why It Doesn't Fit |
+|---|---|---|---|
+| Digit Gig Worker Cover | ₹299/month | Accident, death, hospitalisation | Covers events that are rare. Ignores daily income disruption. |
+| Bajaj Allianz Gig Shield | ₹399/month | Vehicle damage, hospitalisation | Worker already has own mechanic. Not his first worry. |
+| ICICI Lombard Delivery Partner Plan | ₹249/month | Personal accident | Monthly model misaligns with weekly income cycle. |
+| Platform self-insurance (Swiggy/Zomato) | Varies | Accident only during delivery | Doesn't cover weather disruptions at all. |
+
+Not one of these covers income lost due to rain. Not one uses a parametric trigger. Not one is priced weekly. This told us the space is genuinely empty.
+
+### The Q-Commerce Angle
+
+We specifically studied Q-Commerce (Zepto, Blinkit, Swiggy Instamart) because it's the fastest-growing and most disruption-exposed segment. A few findings that shaped our product:
+
+- Q-Commerce dark stores operate on **hyper-local zones of 1.5–2.5 km radius**. Riders are registered to exactly one dark store. There is no "switch to another zone" option.
+- A single dark store going offline affects **30–80 registered riders** simultaneously — making zone-level parametric triggers highly accurate.
+- Q-Commerce order frequency (5–8 orders/hour) means a 3-hour disruption at peak time costs a rider 15–24 orders — a significant and measurable loss.
+- Zepto and Blinkit platform APIs expose **order assignment data in near-real-time** (or can be mocked accurately), making platform-side signal verification feasible.
+
+### What We Decided Not to Build (and Why)
+
+Understanding what not to build was as important as knowing what to build.
+
+**Health insurance:** Workers already have fragmented access to government schemes (PMJAY, ESIC). Adding another health layer creates confusion, not value.
+
+**Accident insurance:** Rare but catastrophic events need fundamentally different actuarial models. We don't have the expertise to do this responsibly in 6 weeks.
+
+**Vehicle insurance:** This is already a competitive market. Riders have existing relationships with mechanics and informal repair networks. They don't want our version.
+
+**Long-tail coverage:** Monthly or annual policies require upfront capital from workers who operate week-to-week. The premium timing alone kills adoption.
+
+What's left — daily income protection from external disruptions, priced weekly, paid automatically — is narrow. But it's the only thing these workers are actually asking for. And narrowness, done well, is a product strategy.
+
+---
+
+## The Problem We're Actually Solving
+
+India has roughly 5 million platform-based gig delivery workers. The ones we care about — Q-Commerce riders on Zepto and Blinkit — are working 10–12 hour days to enable our "10-minute grocery" habit. When it rains hard enough, or when Section 144 drops on a zone without warning, they go home with nothing.
+
+The existing "solutions" are either nonexistent or completely misaligned — monthly health insurance plans that cost ₹300+/month and cover hospitalisation, not a day's lost wages. That's not what a rider needs when a flood shuts his zone for 6 hours on a Tuesday evening.
+
+What he needs is: **₹400 in his UPI account by the time the rain stops.** No forms. No agent calls. No waiting.
+
+That's the only thing Kavach does. We think doing one thing right matters more than doing five things badly.
+
+---
+
+## Why We Picked Q-Commerce
+
+We went back and forth on this. Food delivery (Zomato/Swiggy) was the obvious choice — bigger market, more visible. But the more we dug in, the more we realized Q-Commerce riders have a fundamentally worse disruption problem.
+
+A Zomato rider working a bad-weather shift can switch zones, take fewer orders, or hop to another app. A Zepto rider is **zone-locked**. He's tied to one dark store. When that zone gets flooded or shut down, there's nowhere to go. It's binary — working or not working.
+
+That total-loss dynamic is exactly what parametric insurance is designed for. Partial losses are messy to verify. Binary losses are clean to confirm and clean to pay.
+
+| | Food Delivery | Q-Commerce (our segment) |
+|---|---|---|
+| Delivery radius | 3–8 km | 1–3 km |
+| Orders/hour (normal day) | 2–3 | 5–8 |
+| Can shift to another zone? | Yes | No |
+| Disruption = partial or total loss? | Usually partial | Almost always total |
+| Income lost in a 3-hour disruption | ₹150–200 | ₹300–500 |
+
+The math made the choice for us.
+
+---
+
+## Meet Arjun — Our Primary Persona
+
+![Arjun — Primary Persona](assets/arjun.png)
+
+Arjun is not an abstraction. He's a composite of conversations we had with actual riders near our campus. The ₹3,200 number, the WhatsApp group detail, the "no notification" — these are real.
+
+---
+
+## How Kavach Works
+
+The entire product can be described in three words: **Detect. Decide. Disburse.**
+
+![How Kavach Works](assets/howitworks.png)
+
+We monitor external disruption signals continuously. When a threshold is crossed and confirmed by a second independent signal (our Two-Key Rule), the system classifies it as a covered disruption, calculates what Arjun would have earned in that window based on his 4-week income average, and pushes the payout to his UPI.
+
+He never filed anything. He never called anyone.
+
+**Covered:** Income lost from weather (heavy rain, floods, extreme heat), civic disruptions (curfews, strikes, zone closures), platform-level outages that stop order assignment.
+
+**Not covered — and we mean it:** Health. Accidents. Vehicle damage. Life cover. This is in the product design, not the fine print.
+
+### Onboarding & Weekly Cycle
+
+![Getting Started — Onboarding & Weekly Cycle](assets/gettingstarted.png)
+
+No documents. No selfie-with-ID. No agent visit. Monday start is deliberate — Q-Commerce platform payouts settle Monday/Tuesday. The worker has money in hand when the premium comes out.
+
+---
+
+## Real Scenarios We Designed For
+
+These aren't hypothetical. These situations have happened.
+
+### Scenario 1 — The HSR Layout Cloudburst
+
+> Wednesday evening, 7:30 PM. IMD red alert for South Bengaluru. Rainfall hits 68mm/hour. The Zepto dark store goes offline — their app stops assigning orders.
+
+```
+  7:30 PM   IMD flags red-alert rainfall in HSR Layout PIN cluster
+     │
+     ▼
+  7:32 PM   Order volume in zone drops 78% — Two-Key confirmed
+     │
+     ▼
+  7:33 PM   Arjun's phone: "Zone disruption detected. Coverage active."
+     │         (He doesn't need to do anything)
+     ▼
+  7:34 PM   Payout calc: avg 7–10 PM earnings = ₹320 · 2.5 hrs disrupted
+     │
+     ▼
+  7:35 PM   UPI transfer initiated  ←  90 seconds from trigger
+```
+
+### Scenario 2 — The Sudden Section 144
+
+> A political rally turns tense. Section 144 imposed across three PIN codes at 6 PM with 15 minutes' notice.
+
+System confirms: news NLP flags zone restriction → zero order assignments in PIN cluster → Arjun had the app open 30 minutes before. All three confirm. Payout for blocked hours, capped at 6 hrs/incident.
+
+### Scenario 3 — Extreme Heat (Partial Disruption)
+
+> May. Delhi. 44°C. AQI 425. Some riders still work. Customer volumes drop but don't collapse.
+
+We classify this as a **partial disruption — 50% payout**. Some work is still possible, just risky and reduced. We don't pay full coverage for a situation that isn't a total shutdown. The 50% rule is a deliberate design decision, not a gap — it keeps our loss ratio honest.
+
+---
+
+## The Weekly Premium Model
+
+### Why Weekly Pricing
+
+We looked at this from Arjun's perspective. He gets paid daily or weekly. A monthly premium of ₹249 sounds small on paper. But for someone operating week-to-week without savings, it means paying ₹249 upfront from money he hasn't earned yet. It doesn't work.
+
+Weekly pricing means the premium comes out of money he already has, covering the week he's about to work. It matches his financial rhythm exactly.
+
+### The Three Tiers
+
+| Tier | Weekly Premium | Daily Cost | Coverage Cap | Best For |
+|---|---|---|---|---|
+| **Kavach Basic** | ₹29 / week | ₹4.14 / day | ₹800 | Part-time or new riders |
+| **Kavach Plus** ◄ TARGET | ₹49 / week | ₹7.00 / day | ₹1,500 | Full-time daily riders |
+| **Kavach Max** | ₹79 / week | ₹11.28 / day | ₹2,500 | High-earning, long-tenure riders |
+
+Kavach Plus at ₹7/day = less than one auto ride to the dark store.
+
+![Weekly Premium Tiers](assets/weeklypremium.png)
+
+### How AI Adjusts Coverage (Not Price)
+
+We kept prices fixed and visible. Arjun doesn't need a premium that fluctuates — that creates anxiety and erodes trust. What the AI adjusts is the **coverage cap**, not the price.
+
+```
+  BASE TIER (₹49)  ──▶  Risk Model  ──▶  ADJUSTED CAP
+
+  Low-disruption zone history    →  Cap × 1.15  (bonus)
+  Stable income (low variance)   →  Cap × 1.0   (unchanged)
+  Monsoon season, flood-prone    →  Cap × 0.85  (reduced)
+  New worker, no history         →  Cap × 0.90  (conservative)
+```
+
+Same ₹49 every week. The risk-adjusted cap is visible in the app. No surprises.
+
+**Financial targets:** Loss ratio 60–65% (parametric insurance standard). Max 2 payout events per worker per week. We'll stress-test the actuarial model in Phase 2 with simulated disruption scenarios against historical IMD data.
+
+---
+
+## Parametric Triggers — The Two-Key Rule
+
+The single most important architectural decision we made:
+
+> **No single data source can trigger a payout.**
+
+We call this the Two-Key Rule. Every covered disruption requires two independent signals confirmed simultaneously. It eliminates false triggers from mild weather, and — critically — it makes GPS spoofing completely insufficient on its own.
+
+| Trigger Type | Signal A — Primary | Signal B — Secondary | Payout |
+|---|---|---|---|
+| Heavy rain / flood | IMD red alert > 50mm/hr | Zone order volume drop > 70% | 100% |
+| Extreme heat / AQI | IMD temp > 42°C OR AQI > 400 | Active rider drop in zone > 50% | 50% |
+| Civic disruption | Govt/news NLP: curfew or strike keyword | Zero order assignments in PIN zone | 100% |
+| Waterlogging | IMD flood warning + BBMP data | GPS cluster static > 45 min in zone | 100% |
+| Platform outage | API heartbeat failure > 20 min | Worker app showing 0 available orders | 70% |
+
+**Why platform order volume as Signal B?** This is the part we haven't seen done elsewhere. Traditional parametric systems only use weather APIs. But if Zepto orders are flowing despite bad weather, riders are clearly still working. The demand signal closes the loop that weather data alone can't — and it also makes GPS spoofing ineffective. You can fake a GPS location. You can't fake Zepto's order volume being down 75%.
+
+![The Two-Key Rule](assets/twokey.png)
+
+---
+
+## AI/ML: What We're Actually Building
+
+Honest about this: we're not claiming a fully trained production ML system in 6 weeks. We're committing to a working implementation with real logic and real training where possible, with clearly labelled mocks where we hit API walls.
+
+One thing we want to be upfront about: **the Two-Key Rule trigger logic is deliberately rule-based, not ML.** In insurance, the decision to pay someone needs to be auditable and explainable — a regulator or a worker asking "why didn't I get paid?" deserves a clear answer, not "the model said so." Rules give us that. ML sits around the rules to catch what rules can't — anomalies, patterns, fraud signals — but the core trigger decision stays deterministic and inspectable.
+
+Here's where ML actually lives in our system:
+
+---
+
+### 1. Risk Profiling Model — XGBoost Classifier
+
+**What it does:** Assigns a zone-level risk multiplier to each worker at onboarding, re-evaluated every Monday before the new week's premium is deducted.
+
+**Algorithm:** XGBoost — chosen because the feature set is tabular with a mix of numerical and categorical inputs, and XGBoost handles this well without needing extensive preprocessing. Also fast enough to run inference at premium renewal time without adding latency.
+
+**Training data:** Historical IMD disruption event logs by PIN code (publicly available, 24 months), BBMP waterlogging complaint data, zone type classifications, platform downtime incident reports (estimated from public sources where APIs aren't available).
+
+**Input features at inference:**
+
+| Feature | Type | Description |
+|---|---|---|
+| `zone_disruption_count_12m` | Numerical | Number of red-alert events in the zone in the last 12 months |
+| `zone_disruption_count_24m` | Numerical | Same, 24-month window |
+| `zone_type` | Categorical | Residential dense / commercial / mixed / industrial |
+| `dark_store_tier` | Categorical | Zepto Gold / Standard / Blinkit Express |
+| `seasonal_week_index` | Numerical | Week of year (1–52), captures monsoon/summer cycles |
+| `worker_income_variance` | Numerical | Std dev of weekly earnings over past 8 weeks |
+| `worker_tenure_weeks` | Numerical | How long the worker has been on the platform |
+| `historical_claim_rate` | Numerical | Worker's own past claim frequency (0 at onboarding) |
+
+**Output:** A multiplier between 0.7x and 1.4x applied to the worker's coverage cap for that week. The base premium stays fixed — only the cap shifts.
+
+**Why not adjust the premium itself?** We tested this framing with riders we spoke to. A premium that changes week to week creates anxiety — workers stop trusting the product. A fixed price with a transparently explained cap adjustment is something they can understand and plan around.
+
+---
+
+### 2. Trigger Validation — Rules Engine + Isolation Forest
+
+The core Two-Key Rule is deterministic and intentionally so:
+
+```
+  IF   signal_A_confirmed (weather/civic threshold crossed)
+  AND  signal_B_confirmed (platform order volume drop ≥ threshold)
+  AND  worker_was_active_in_30min_before_event
+  THEN
+       IF zone_claim_penetration > 40%   ← systemic, not individual
+            → TRIGGER PAYOUT FLOW
+       ELSE → FLAG FOR INDIVIDUAL REVIEW
+```
+
+**Where ML enters:** An **Isolation Forest** runs in parallel on the real-time claim stream per zone. It's trained on historical "normal disruption" claim distributions — what the temporal spread, claim count, and zone penetration rate look like during genuine events. When a new disruption triggers claims, the Isolation Forest scores how anomalous the current distribution is relative to that baseline.
+
+It doesn't block payouts on its own. It raises a flag that feeds into the fraud scoring pipeline below. The Two-Key Rule fires first; the Isolation Forest tells us whether what's happening looks statistically normal for a real disruption.
+
+---
+
+### 3. Sensor Fusion Fraud Classifier — Random Forest
+
+This is the model we were previously vague about. Here's the full specification.
+
+**What it does:** Scores each claim on a 0–1 probability that the worker was genuinely present in the disruption zone. 0 = almost certainly at home spoofing. 1 = all signals consistent with genuine stranding.
+
+**Algorithm:** Random Forest classifier — chosen over a neural net because the feature set is small and structured, interpretability matters (we need to be able to explain a flag to an ops reviewer), and Random Forests are robust to missing features (a worker's barometric sensor might be unavailable on some devices).
+
+**Training data:** This is the bootstrapping problem we're honest about. Initially we train on simulated sessions — we generate "genuine stranding" sessions by sampling from workers who were confirmed active during past documented disruptions, and "spoofing" sessions by sampling from workers whose GPS and cell tower data showed the mismatch pattern. As real fraud cases are confirmed, those replace the simulated data progressively.
+
+**Input features:**
+
+| Feature | Window | Description |
+|---|---|---|
+| `accel_variance_10m` | 10 min pre/during | Std dev of accelerometer magnitude — not a primary signal. A sheltering worker is also still. Used in combination only. |
+| `baro_delta_from_baseline` | 30 min | Pressure drop vs worker's own recent baseline. Storm systems cause measurable drops. |
+| `baro_matches_zone_stations` | At trigger time | Does the device barometric reading match nearby IMD station readings? |
+| `network_signal_std` | 10 min during | Std dev of RSSI — towers genuinely degrade in heavy rain (rain fade). |
+| `cell_tower_zone_match` | At trigger time | Boolean — does the registered tower's coverage area match the claimed disruption zone? |
+| `gps_to_tower_distance_km` | At trigger time | Distance between GPS-reported location and cell tower's known coordinates. >2km = anomalous. |
+| `platform_activity_pre_event` | 30 min before | Was the worker accepting/completing orders before the disruption? |
+| `platform_silence_post_event` | 30 min after | Did activity drop after the event, or was it already silent before? |
+| `battery_drain_delta` | 10 min | Drain rate vs worker's own recent baseline. Outdoor network stress elevates this. |
+| `wifi_ssid_zone_match` ⚗️ | At trigger time | **Experimental.** Count of WiFi SSIDs visible to the device that match the zone's known fingerprint database. A spoofer at home sees their home networks — none of which exist in HSR Layout. |
+| `wifi_bssid_zone_match` ⚗️ | At trigger time | **Experimental.** Same as above but using BSSID (router hardware ID) — more precise than SSID since SSIDs can be duplicated. |
+| `bluetooth_mac_zone_match` ⚗️ | At trigger time | **Experimental.** Count of Bluetooth device MACs visible that appear in the zone's baseline. Persistent devices like shop scanners, fixed IoT devices, ATMs appear reliably at their locations. |
+
+**Why accelerometer isn't the lead signal:** A rider sheltering under an awning is stationary. So is a spoofer at home. Accelerometer variance alone is a weak discriminator for still-but-genuine workers. It contributes to the ensemble but the cell tower match, barometric delta, and platform activity sequence carry far more weight. The Random Forest learns these weights from training data rather than us hardcoding them — which is one good reason to use ML here instead of rules.
+
+**Output:** Fraud probability score 0.0–1.0, fed into the three-tier routing decision alongside the Isolation Forest anomaly score.
+
+---
+
+### 3a. Experimental — WiFi & Bluetooth Location Fingerprinting
+
+> ⚗️ **This feature is not in the current architecture diagram.** We're documenting it here as a planned experimental addition for Phase 3, inspired by prior art from Incognia's location behavioral analytics approach. It will be validated before being added to the main fraud scoring pipeline.
+
+**The idea:** Location isn't just a GPS coordinate. Every physical location has a unique ambient radio environment — a set of WiFi networks and Bluetooth devices visible from that spot that doesn't exist anywhere else. We can fingerprint a zone using this radio environment and use mismatches as a GPS spoofing signal that's completely independent of GPS itself.
+
+**How we'd build the zone fingerprint database:**
+
+Every time a confirmed-genuine worker checks in at their dark store zone (verified by actual completed orders), the app takes a passive radio scan:
+- All WiFi SSIDs + BSSIDs visible (using `WifiManager` — no connection needed)
+- All Bluetooth device MACs visible (using `BluetoothAdapter.startDiscovery()`)
+
+Over multiple shifts across 30–80 riders, the zone accumulates a stable fingerprint. Persistent signals (the dark store's own WiFi, nearby shop routers, fixed Bluetooth devices like scanners and payment terminals) appear reliably. We store this as a per-zone set with frequency weights — signals seen on 80%+ of scans get high weight, occasional ones get low weight.
+
+**At claim time:**
+
+```
+  Zone HSR Layout fingerprint (known):
+    SSIDs:    ["Zepto_Store_5G", "KFC_Guest", "HDFC_ATM_BT"]
+    BSSIDs:   ["a4:3e:51:...", "bc:f6:85:...", "00:1a:2b:..."]
+
+  Spoofer's device scan (from Whitefield):
+    SSIDs:    ["Jio_Home_4G", "ACT_Fibernet_99", "Samsung_TV"]
+    BSSIDs:   ["d8:47:32:...", "f0:2f:74:...", "44:65:0d:..."]
+
+  Match score: 0 / 12  →  HARD fraud signal
+```
+
+**Why this is stronger than barometric pressure alone:**
+
+Barometric pressure tells you a storm is overhead — it's a good signal but a spoofer near the zone boundary could get a similar reading. WiFi/Bluetooth fingerprints are **hyperlocal to within 50–100 metres**. You can't see HSR Layout's networks from 500m away, let alone from Whitefield. The radio fingerprint is essentially a physical proof-of-presence certificate.
+
+This is the same core mechanism Incognia uses for location behavioral analytics — we're applying it specifically to the one-time event verification problem rather than their persistent identity use case.
+
+**The bootstrapping caveat:** The zone fingerprint database needs enough genuine check-ins before it's reliable. New zones start with `wifi_bssid_zone_match` weighted near-zero in the Random Forest and the weight increases as the fingerprint database matures. We won't use this signal to hard-flag anyone until a zone has at least 50 genuine scan contributions. This is documented in the model training pipeline and flagged in the ops dashboard.
+
+**Android permissions required:**
+- `ACCESS_WIFI_STATE` — scan visible networks (no connection needed)
+- `ACCESS_FINE_LOCATION` — required for WiFi scan results on Android 9+
+- `BLUETOOTH_SCAN` — scan nearby Bluetooth devices
+
+All standard for a location-based app. The permission rationale ("we verify your location during disruptions to process your payout") is honest and explainable to users.
+
+---
+
+### 4. Civic Disruption NLP Classifier — Fine-tuned DistilBERT
+
+We previously said "news NLP feed" without specifying what that meant. Here's what it actually is.
+
+**What it does:** Classifies incoming news headlines and government alert text into: `[NO_DISRUPTION, CURFEW, STRIKE, ZONE_CLOSURE, OTHER_DISRUPTION]`, and extracts the affected zone (PIN code or area name) and estimated severity.
+
+**Algorithm:** DistilBERT fine-tuned on a labelled dataset of Indian news headlines — specifically regional language and English headlines from sources like Times of India, The Hindu, NDTV, and state government alert RSS feeds. DistilBERT is the right choice here: it's small enough to run inference in real-time (not just batch), handles the mixed formal/informal language of Indian news well, and doesn't need the full BERT parameter count for a classification task this narrow.
+
+**Training data:** We'll build a labelled dataset from archived news headlines tagged with known disruption events — cross-referencing dates and zones where we have ground truth (historical flood events, documented curfews, known strikes). Starting target: ~3,000 labelled examples across the five classes. Achievable in Phase 2 with semi-automated labelling.
+
+**Input:** Raw headline or alert text string + source metadata (publication, timestamp, region tag if available).
+
+**Output:** `{ disruption_type: "CURFEW", confidence: 0.91, extracted_zone: "HSR Layout", severity: "HIGH" }` — this structured output then feeds into the Two-Key Rule engine as Signal A for civic disruptions.
+
+**Why not just keyword matching?** We started with keyword matching ("curfew", "Section 144", "bandh", "strike") and it works for obvious cases. But Indian news headlines are inconsistent — "movement restrictions imposed" doesn't contain "curfew" but means the same thing. A classifier generalises across phrasings; keywords miss the long tail.
+
+---
+
+### 5. Social Graph Ring Detector — Graph-based Anomaly Detection
+
+**What it does:** Detects coordinated fraud rings by identifying densely connected subgraphs within the worker network whose claim timing and zone behaviour are statistically anomalous.
+
+**Algorithm:** We build the worker graph using NetworkX. Each worker is a node; edges represent shared dark store affiliation, overlapping delivery zone history, and (with consent) Bluetooth/WiFi proximity logs. When a disruption triggers a cluster of claims, we run a **community detection algorithm** (Louvain method) on the subgraph of claimants to see if they form an unusually tight community relative to the broader zone population.
+
+We then compute a **graph anomaly score** by comparing the claimant subgraph's density and clustering coefficient against the expected distribution for a random sample of the same size from the zone's worker population. A genuine disruption affects a geographically spread, socially sparse set of workers — their subgraph looks like the general population. A fraud ring looks like a clique.
+
+**Not deep learning.** We considered GNNs (Graph Neural Networks) but they're overkill for a graph this size (30–80 workers per zone) and would require labelled graph-level training data we don't have yet. Louvain + statistical comparison is implementable now, interpretable, and effective at the scale we're operating.
+
+---
+
+### ML Component Summary
+
+| Component | Algorithm | Genuinely ML? | Phase |
+|---|---|---|---|
+| Zone risk profiling | XGBoost classifier | Yes | Phase 1 (train), Phase 2 (deploy) |
+| Claim distribution anomaly | Isolation Forest | Yes | Phase 2 |
+| Sensor fusion fraud scoring | Random Forest classifier | Yes | Phase 2 |
+| Civic disruption detection | Fine-tuned DistilBERT | Yes | Phase 2 |
+| Social graph ring detection | Louvain + graph statistics | Partially (graph algorithms) | Phase 3 |
+| WiFi/Bluetooth fingerprinting ⚗️ | Zone radio fingerprint matching | Yes (feature engineering + RF) | Phase 3 — experimental |
+| Two-Key Rule trigger | Deterministic rules | No — intentionally | Phase 2 |
+| Payout calculation | Formula | No — intentionally | Phase 2 |
+
+The last two being rule-based is a deliberate design choice, not a gap. The ones above them being ML is where the system actually learns and adapts. The ⚗️ entry is experimental — planned for Phase 3 validation before inclusion in the main scoring pipeline.
+
+---
+
+## System Architecture
+
+> The full system, from signal ingestion to payout disbursement.
+
+![Kavach Architecture](assets/Kavach_Archi_New.png)
+
+---
+
+## Why Mobile, Not Web
+
+Q-Commerce delivery partners live in their apps. Zepto's rider app is open 10+ hours a day. If Kavach lives in a browser tab, it's already dead — they'll never look at it.
+
+Three non-negotiable reasons for mobile:
+1. **Push notifications** — the only way to reach a rider mid-shift about a disruption in real time
+2. **Device sensor access** — accelerometer, gyroscope, barometric pressure, cell tower IDs — all needed for fraud detection, all only accessible from a native/PWA app
+3. **UPI deep links** — frictionless payment confirmation is a native-mobile pattern
+
+We're building React Native, Android-first. Roughly 85% of the riders we've spoken to are on Android. PWA fallback for iOS. The insurer/admin dashboard is web-only — those users are desk-based, so that's fine.
+
+---
+
+## Tech Stack
+
+What we're actually going to use — not an aspirational list.
+
+| Layer | Technology | Reason |
+|---|---|---|
+| Mobile App | React Native + Expo | Team familiarity — matters at hackathon pace. |
+| Backend API | Node.js + Express | Fast iteration, JSON-native. |
+| ML Inference | Python + FastAPI (microservice) | Separate service — ML and API iteration speeds differ. |
+| Primary DB | PostgreSQL | Policies, workers, claims, zones, audit logs. |
+| Cache / State | Redis | Real-time trigger state, session management, rate limiting. |
+| Event Stream | Apache Kafka | Disruption signals fan out to multiple consumers and can't be dropped. |
+| ML Models | XGBoost, Random Forest, Isolation Forest, DistilBERT, NetworkX + Louvain (scikit-learn + HuggingFace) | Five distinct models each doing a specific job. All served as FastAPI endpoints. |
+| Weather APIs | IMD + OpenWeatherMap + AQICN | IMD primary. OWM backup. Mocked where rate-limited. |
+| Platform APIs | Zepto / Blinkit mock | No partner API access yet. Simulated accurately. |
+| Payments | Razorpay test mode + UPI sandbox | Sandbox through Phase 2. |
+| Infrastructure | AWS EC2 + S3, Docker, GitHub Actions | Standard. Nothing exotic. |
+
+### Development Timeline
+
+| Phase | Timeline | What We're Doing |
+|---|---|---|
+| **Phase 1** | Weeks 1–2 (now) | Persona research, market study, architecture design, Two-Key Rule definition, this README, initial tech spikes |
+| **Phase 2** | Weeks 3–4 | Working React Native app — onboarding, policy management, dynamic premium calc, claims engine, 3–5 disruption triggers with mock APIs |
+| **Phase 3** | Weeks 5–6 | Fraud detection (sensor fusion + social graph), payout simulation via Razorpay sandbox, insurer dashboard, 5-min demo video, final pitch deck |
+
+---
+
+## Adversarial Defense & Anti-Spoofing Strategy
+
+> **The Market Crash scenario:** A coordinated ring of 500 delivery workers organizes via Telegram. Using GPS-spoofing apps, they fake their locations inside a red-alert weather zone while sitting safely at home. They trigger mass false payouts, draining the platform's liquidity pool.
+
+---
+
+Let's be direct: if your entire fraud defense is "check GPS coordinates," you deserve to get drained. GPS is a single signal from the device itself. Any app with mock location enabled beats it trivially.
+
+We knew this before the Market Crash scenario — it's why the Two-Key Rule exists. But a coordinated ring is a harder problem than individual fraud. The spoofed GPS still fails against our architecture, but for reasons that go deeper than the Two-Key Rule. Here's the full picture.
+
+---
+
+### 1. Telling the Real Worker from the Spoofer
+
+A delivery partner genuinely stranded in a flood zone looks very different from someone sitting at home with a spoofing app — not on GPS, but on **everything else**.
+
+**Device sensor behavior — the Random Forest sees all of these together**
+
+One clarification upfront: a rider sheltering from rain under an awning is also stationary. So accelerometer alone is a weak signal — a still genuine worker and a still spoofer look the same on that single dimension. Our Random Forest classifier doesn't treat any sensor as independently decisive. It learns the weighted combination from training data. The features that carry the most weight in practice are the ones that are hardest to fake:
+
+| Signal | Genuinely Stranded | GPS Spoofer at Home | Fakeable? |
+|---|---|---|---|
+| **Cell tower zone match** | Tower covers the disruption zone | Tower is in a different neighbourhood entirely | No — physics |
+| **Barometric pressure delta** | Pressure drops matching the storm system passing overhead | Normal indoor pressure — no storm overhead | No — requires physical presence |
+| **Barometric vs IMD station match** | Device reading matches nearby IMD weather station | Mismatch — different location, different pressure | No — requires physical presence |
+| **Network signal std dev** | Fluctuating — rain fade on towers causes interference | Stable full bars at home | Hard to fake |
+| **Platform activity sequence** | Active before event, silent after | Silent or spoofing app active before weather alert | Hard to fake |
+| **GPS-to-tower distance** | GPS and cell tower point to same zone | GPS says flood zone, tower says home | No — physics |
+| **Accelerometer variance** | Low to moderate — sheltering workers are also still | Near-zero — but this is a weak signal on its own | Easy to fake |
+| **Battery drain delta** | Elevated — network stress + GPS under bad signal | Normal baseline | Moderate difficulty |
+
+The accelerometer is in the model but it's a low-weight feature. The cell tower match and barometric delta are the hard signals — they require physical presence and cannot be faked in software. The Random Forest learns these relative importances from training data rather than us hardcoding them, which is the right reason to use ML here instead of a rules engine.
+
+We build a fraud probability score 0.0–1.0 from all features combined. This score feeds directly into the three-tier routing: low → auto-approve, medium → soft hold, high → hard flag. Full model specification is in the AI/ML section above.
+
+**Platform activity timeline**
+
+This is the signal we're most confident about. A genuine disruption produces a specific sequence in the worker's platform log:
+
+```
+  GENUINE WORKER                    GPS SPOOFER
+  ─────────────────────────────────────────────────
+  6:00 PM  Active, accepting orders  Spoofing app ON
+  6:30 PM  Still active              "Enters" flood zone
+  7:00 PM  RED ALERT issued          RED ALERT issued
+  7:05 PM  Activity drops — can't    Claim triggered
+           reach dark store
+  7:10 PM  Claim auto-triggered
+
+  KEY: Activity drops AFTER alert.  KEY: Location moves
+  Sequence is: active → disruption  BEFORE alert. Sequence
+  → silent.                         is: spoof → alert → claim.
+
+  The ordering is different. Our system checks it.
+```
+
+**Cell tower triangulation vs GPS**
+
+GPS spoofing apps fake the coordinates sent to our server. They cannot change which cell tower the phone is physically connected to. We run a parallel location estimate using cell tower IDs (available in Android network info) and Wi-Fi network positioning.
+
+```
+  GPS says:        "Koramangala flood zone"
+  Cell tower says: "Whitefield"  ← phone is physically here
+
+  → HARD FRAUD FLAG. Immediate.
+```
+
+This isn't exotic technology. It's using what's already there.
+
+---
+
+### 2. Detecting the Ring, Not Just the Individual
+
+Individual fraudsters are manageable. A coordinated ring of 500 people has a **statistical signature** that's very hard to suppress.
+
+**Temporal clustering — the Telegram problem**
+
+When a real disruption hits, riders stop working gradually. Rain gets heavier. Some zones flood before others. Claim initiation timestamps spread across 20–40 minutes as conditions worsen progressively.
+
+A fraud ring gets a Telegram message: *"red alert issued, everyone activate."* Fifty people trigger almost simultaneously.
+
+```
+  GENUINE DISRUPTION               COORDINATED FRAUD
+  Claim timestamps:                Claim timestamps:
+
+  7:02 ─ claim                    7:01 ─────────────── 12 claims
+  7:06 ─ claim                    7:02 ─────────────────────── 23 claims
+  7:11 ─ claim                    7:03 ──── 8 claims
+  7:14 ─ claim                    7:31 ─ 1 claim (straggler)
+  7:18 ─ claim
+  7:22 ─ claim                    Poisson distribution test: FAIL
+  7:29 ─ claim                    Burst anomaly: FLAGGED
+
+  Poisson distribution: normal
+```
+
+The only countermeasure is to not coordinate — which defeats the point of a ring.
+
+**Social graph density**
+
+We maintain an anonymized worker graph built from dark store co-affiliation, overlapping zone history, and (with consent) device proximity logs from Bluetooth/WiFi fingerprints.
+
+```
+  GENUINE DISRUPTION               FRAUD RING
+  Claims from workers in zone:     Claims from workers in zone:
+
+    ○ — ○   ○   ○ — ○               ●—●—●—●
+        |       |                   |   |   |
+        ○   ○   ○ — ○               ●—●—●—●—●
+                                    |       |
+  Sparse connections.               ●———————●
+  Geographically distributed.
+                                  Dense subgraph.
+  This is what random workers      They all know each other —
+  affected by the same storm       worked the same dark store,
+  look like. Low graph density.    met via Telegram group.
+```
+
+When a spike in claims comes from a densely connected subgraph, that's statistically anomalous. We flag the cluster.
+
+**Zone claim penetration asymmetry**
+
+In a genuine flood: 80–95% of active workers in the zone are affected and claim.
+
+In coordinated fraud: a specific subset claims while others keep working. You see 30 claiming out of 90 active — and the 30 are all connected to each other, while the 60 who are completing orders are not.
+
+Fraudsters can't know who else in the zone is or isn't claiming. This asymmetry is invisible to them, and obvious to us.
+
+**Tier-upgrade timing**
+
+Fraudsters want maximum payout. We flag workers who upgrade from Kavach Basic to Kavach Max within 48–72 hours of a major storm appearing in the IMD 5-day forecast. That pattern doesn't appear in legitimate usage.
+
+---
+
+### 3. Flagging Without Punishing Honest Workers
+
+This is the hardest part. Bad weather causes real network problems — dropped GPS lock, degraded signal, unreliable sensor readings. A genuine worker in a flood zone shouldn't lose his ₹320 because his phone's GPS was spotty.
+
+![Fraud Detection — Three-Tier Claim Routing](assets/frauddetection.png)
+
+**Why the 4-hour hold works against fraudsters more than honest workers:**
+
+A genuine worker in a storm has patchy GPS and weak signal — those signals look anomalous initially. But over 4 hours, his phone stays in the flood zone, his accelerometer keeps showing movement, his battery keeps draining. The genuine signature compounds. Signal resolves to "real."
+
+A spoofer sitting at home shows the opposite: no movement, stable battery, full signal, no platform activity. Over 4 hours, the fraud signature gets stronger, not weaker. The hold punishes fraudsters proportionally more.
+
+**When a ring is detected:**
+
+We don't punish the whole zone. We isolate the subgraph. Claims from the connected ring → Hard Flag. Claims from everyone else in the same zone → continue processing normally. Ops team gets alerted. Zepto/Blinkit get notified to cross-reference their data. Ring members' renewals are blocked pending investigation.
+
+---
+
+### Why the Market Crash Syndicate Fails Against Kavach
+
+```
+  THE 500-PERSON GPS SPOOFING RING FAILS ON 5 INDEPENDENT DIMENSIONS:
+
+  [1] Accelerometers   →  Phones on tables, not riders in storms
+                          Sensor fusion model catches it
+
+  [2] Cell towers      →  Physical location is home, not flood zone
+                          Triangulation catches it
+
+  [3] Timestamps       →  50 simultaneous claims breaks Poisson
+                          Temporal clustering catches it
+
+  [4] Social graph     →  Dense ring = anomalous subgraph
+                          Graph detector catches it
+
+  [5] Zone penetration →  30 claiming while 60 are still delivering
+                          Asymmetry is obvious
+
+  Any 1 of these  →  Soft Hold
+  Any 3 of these  →  Hard Flag
+  All 5           →  Ring detection + ops escalation
+```
+
+They beat GPS. They don't beat physics, cell towers, statistics, and graph theory simultaneously.
+
+The syndicates exploited a system that trusted a single signal. We never did.
+
+---
+
+<div align="center">
+
+```
+  ─────────────────────────────────────────────────────────
+  Built for the last mile. Defended against those who'd
+  exploit the people who work it.
+  ─────────────────────────────────────────────────────────
+```
+
+*Phase 2 code will be in this same repo. This README will grow with the build.*
+
+**Team:** Lucenta  
+**Demo Video:** [Watch Here](https://drive.google.com/drive/folders/13lFUkyhXIPRCUWU_shfOSvRg2eSPcr5_)
+
+</div>
