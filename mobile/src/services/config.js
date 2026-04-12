@@ -52,6 +52,6 @@ export const MOCK_PLATFORM_API_URL_CANDIDATES = unique([
 	'http://127.0.0.1:3001',
 ]);
 
-export const API_BASE_URL ="https://kavach-backend-o6o4.onrender.com/api";
+export const API_BASE_URL = API_BASE_URL_CANDIDATES[0];
 
 export const MOCK_PLATFORM_API_URL = MOCK_PLATFORM_API_URL_CANDIDATES[0];
