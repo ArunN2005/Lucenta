@@ -14,6 +14,7 @@ import {
 import { SpaceMono_400Regular } from '@expo-google-fonts/space-mono';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import MainTabs from './src/navigation/MainTabs';
+import AppErrorBoundary from './src/components/AppErrorBoundary';
 import api from './src/services/api';
 import colors from './src/theme/colors';
 
@@ -100,18 +101,20 @@ export default function App() {
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" />
-      <NavigationContainer>
-        <Stack.Navigator
-          initialRouteName={initialRoute}
-          screenOptions={{
-            headerShown: false,
-            cardStyle: { backgroundColor: colors.bgPrimary },
-          }}
-        >
-          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-          <Stack.Screen name="MainTabs" component={MainTabs} />
-        </Stack.Navigator>
-      </NavigationContainer>
+      <AppErrorBoundary>
+        <NavigationContainer>
+          <Stack.Navigator
+            initialRouteName={initialRoute}
+            screenOptions={{
+              headerShown: false,
+              cardStyle: { backgroundColor: colors.bgPrimary },
+            }}
+          >
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+            <Stack.Screen name="MainTabs" component={MainTabs} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </AppErrorBoundary>
     </View>
   );
 }
