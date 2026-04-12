@@ -40,6 +40,8 @@ router.post('/register', async (req, res) => {
     const cfg = tierConfig[tier];
     const adjustedCap = Math.round(cfg.base_coverage_cap * multiplier);
     const { weekStart, weekEnd } = getCurrentWeekBounds(new Date());
+    const wsString = toDateOnly(weekStart);
+    const weString = toDateOnly(weekEnd);
 
     const policyRes = await pool.query(
       `INSERT INTO policies
@@ -53,8 +55,8 @@ router.post('/register', async (req, res) => {
         cfg.base_coverage_cap,
         adjustedCap,
         multiplier,
-        toDateOnly(weekStart),
-        toDateOnly(weekEnd),
+        wsString,
+        weString,
       ]
     );
 
