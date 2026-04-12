@@ -7,6 +7,10 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
+  Modal,
+  TouchableOpacity,
+  Pressable,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +24,8 @@ import api from '../services/api';
 export default function ClaimsScreen() {
   const [claims, setClaims] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [workerName, setWorkerName] = useState('Delivery Partner');
+  const [selectedProcessedClaim, setSelectedProcessedClaim] = useState(null);
 
   const loadClaims = useCallback(async (showSpinner = false) => {
     if (showSpinner) {
@@ -28,6 +34,11 @@ export default function ClaimsScreen() {
 
     try {
       const workerId = await AsyncStorage.getItem('worker_id');
+      const savedName = await AsyncStorage.getItem('worker_name');
+      if (savedName) {
+        setWorkerName(savedName);
+      }
+
       if (!workerId) {
         setClaims([]);
         return;
@@ -69,8 +80,20 @@ export default function ClaimsScreen() {
     const isProcessing = item.status === 'processing';
     const isProcessed = item.status === 'paid' || item.status === 'processed';
 
+    const onPress = () => {
+      if (isProcessed) {
+        setSelectedProcessedClaim(item);
+      }
+    };
+
     return (
-      <View key={item.claim_id} style={styles.claimRow}>
+      <TouchableOpacity
+        key={item.claim_id}
+        style={styles.claimRow}
+        disabled={!isProcessed}
+        activeOpacity={isProcessed ? 0.82 : 1}
+        onPress={onPress}
+      >
         <View style={styles.claimTextWrap}>
           <Text style={styles.claimTitle}>{item.disruption_type || 'Auto claim'}</Text>
           <Text style={styles.claimMeta}>
@@ -86,8 +109,28 @@ export default function ClaimsScreen() {
             {isProcessing ? 'PROCESSING' : isProcessed ? 'PROCESSED' : String(item.status || 'UNKNOWN').toUpperCase()}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
+  };
+
+  const shareReceipt = async () => {
+    if (!selectedProcessedClaim) {
+      return;
+    }
+    const txId = selectedProcessedClaim.razorpay_payout_id || selectedProcessedClaim.claim_id;
+    const when = new Date(selectedProcessedClaim.paid_at || selectedProcessedClaim.created_at).toLocaleString();
+    try {
+      await Share.share({
+        message:
+          `Kavach payout receipt\n` +
+          `Amount: Rs ${selectedProcessedClaim.payout_amount || 0}\n` +
+          `Paid to: ${workerName}\n` +
+          `Time: ${when}\n` +
+          `UPI transaction ID: ${txId}`,
+      });
+    } catch (_e) {
+      Alert.alert('Share failed', 'Could not open share sheet.');
+    }
   };
 
   const renderSection = (title, data, emptyMessage) => {
@@ -120,6 +163,44 @@ export default function ClaimsScreen() {
             {renderSection('Processed', processedClaims, 'No claims have been processed yet.')}
             {otherClaims.length ? renderSection('Other', otherClaims, '') : null}
           </ScrollView>
+
+          <Modal
+            visible={!!selectedProcessedClaim}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setSelectedProcessedClaim(null)}
+          >
+            <View style={styles.modalBackdrop}>
+              <Pressable style={styles.modalDismissLayer} onPress={() => setSelectedProcessedClaim(null)} />
+              <View style={styles.receiptCard}>
+                <View style={styles.receiptTickWrap}>
+                  <Ionicons name="checkmark" size={42} color="#FFFFFF" />
+                </View>
+                <Text style={styles.receiptAmount}>Rs {selectedProcessedClaim?.payout_amount || 0}</Text>
+                <Text style={styles.receiptPaidTo}>Paid to {workerName}</Text>
+                <Text style={styles.receiptSource}>with Kavach payouts</Text>
+
+                <Text style={styles.receiptDate}>
+                  {selectedProcessedClaim
+                    ? new Date(selectedProcessedClaim.paid_at || selectedProcessedClaim.created_at).toLocaleString()
+                    : '-'}
+                </Text>
+                <Text style={styles.receiptTxn}>
+                  UPI transaction ID: {selectedProcessedClaim?.razorpay_payout_id || selectedProcessedClaim?.claim_id}
+                </Text>
+
+                <View style={styles.receiptActions}>
+                  <TouchableOpacity style={styles.shareBtn} onPress={shareReceipt}>
+                    <Ionicons name="share-social-outline" size={16} color="#1A73E8" />
+                    <Text style={styles.shareBtnText}>Share receipt</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.closeBtn} onPress={() => setSelectedProcessedClaim(null)}>
+                    <Text style={styles.closeBtnText}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
         </View>
       </LinearGradient>
     </SafeAreaView>
@@ -205,5 +286,102 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_500Medium',
     fontSize: 13,
     color: colors.textSecondary,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(7, 15, 25, 0.55)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  modalDismissLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  receiptCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 10,
+  },
+  receiptTickWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#1A73E8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  receiptAmount: {
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 42,
+    color: '#101418',
+  },
+  receiptPaidTo: {
+    marginTop: 6,
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 21,
+    color: '#2B3137',
+  },
+  receiptSource: {
+    marginTop: 2,
+    fontFamily: 'Outfit_500Medium',
+    fontSize: 13,
+    color: '#64717C',
+  },
+  receiptDate: {
+    marginTop: 18,
+    fontFamily: 'Outfit_500Medium',
+    fontSize: 12,
+    color: '#4D5964',
+  },
+  receiptTxn: {
+    marginTop: 6,
+    fontFamily: 'SpaceMono_400Regular',
+    fontSize: 11,
+    color: '#4D5964',
+    textAlign: 'center',
+  },
+  receiptActions: {
+    marginTop: 22,
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  shareBtn: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#9FC4FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shareBtnText: {
+    marginLeft: 6,
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 14,
+    color: '#1A73E8',
+  },
+  closeBtn: {
+    minWidth: 108,
+    minHeight: 42,
+    borderRadius: 22,
+    backgroundColor: '#1A73E8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  closeBtnText: {
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 14,
+    color: '#FFFFFF',
   },
 });
