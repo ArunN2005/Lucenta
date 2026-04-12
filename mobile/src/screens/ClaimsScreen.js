@@ -191,7 +191,7 @@ export default function ClaimsScreen() {
 
                 <View style={styles.receiptActions}>
                   <TouchableOpacity style={styles.shareBtn} onPress={shareReceipt}>
-                    <Ionicons name="share-social-outline" size={16} color="#1A73E8" />
+                    <Ionicons name="share-social-outline" size={16} color={colors.accentSoft} />
                     <Text style={styles.shareBtnText}>Share receipt</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.closeBtn} onPress={() => setSelectedProcessedClaim(null)}>
@@ -297,13 +297,15 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   receiptCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0C1B2A',
     borderRadius: 22,
     paddingVertical: 28,
     paddingHorizontal: 20,
     alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOpacity: 0.18,
+    borderWidth: 1,
+    borderColor: 'rgba(152, 233, 197, 0.3)',
+    shadowColor: '#051119',
+    shadowOpacity: 0.28,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
     elevation: 10,
@@ -312,7 +314,7 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: '#1A73E8',
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
@@ -320,31 +322,31 @@ const styles = StyleSheet.create({
   receiptAmount: {
     fontFamily: 'Outfit_700Bold',
     fontSize: 42,
-    color: '#101418',
+    color: colors.accentSoft,
   },
   receiptPaidTo: {
     marginTop: 6,
     fontFamily: 'Outfit_600SemiBold',
     fontSize: 21,
-    color: '#2B3137',
+    color: colors.textPrimary,
   },
   receiptSource: {
     marginTop: 2,
     fontFamily: 'Outfit_500Medium',
     fontSize: 13,
-    color: '#64717C',
+    color: colors.textSecondary,
   },
   receiptDate: {
     marginTop: 18,
     fontFamily: 'Outfit_500Medium',
     fontSize: 12,
-    color: '#4D5964',
+    color: colors.textSecondary,
   },
   receiptTxn: {
     marginTop: 6,
     fontFamily: 'SpaceMono_400Regular',
     fontSize: 11,
-    color: '#4D5964',
+    color: colors.textMuted,
     textAlign: 'center',
   },
   receiptActions: {
@@ -359,7 +361,8 @@ const styles = StyleSheet.create({
     minHeight: 42,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#9FC4FF',
+    borderColor: 'rgba(152, 233, 197, 0.5)',
+    backgroundColor: 'rgba(64, 213, 160, 0.12)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -368,13 +371,13 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontFamily: 'Outfit_600SemiBold',
     fontSize: 14,
-    color: '#1A73E8',
+    color: colors.accentSoft,
   },
   closeBtn: {
     minWidth: 108,
     minHeight: 42,
     borderRadius: 22,
-    backgroundColor: '#1A73E8',
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -382,6 +385,6 @@ const styles = StyleSheet.create({
   closeBtnText: {
     fontFamily: 'Outfit_700Bold',
     fontSize: 14,
-    color: '#FFFFFF',
+    color: '#05211D',
   },
 });
