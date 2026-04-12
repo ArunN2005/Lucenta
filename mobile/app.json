@@ -1,27 +1,27 @@
-{
-  "expo": {
-    "name": "Kavach",
-    "slug": "kavach",
-    "scheme": "kavach",
-    "version": "1.0.0",
-    "sdkVersion": "54.0.0",
-    "orientation": "portrait",
-    "userInterfaceStyle": "dark",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "android": {
-      "package": "com.kavach.app"
-    },
-    "extra": {
-      "API_BASE_URL": "http://your_local_ip:3000/api",
-      "MOCK_PLATFORM_API_URL": "http://your_local_ip:3001",
-      "eas": {
-        "projectId": "37422371-a46d-4a1b-b67d-df9e30dcaddc"
-      }
-    },
-    "plugins": [
-      "expo-font"
-    ]
-  }
+﻿{
+    "expo":  {
+                 "name":  "Kavach",
+                 "slug":  "kavach",
+                 "scheme":  "kavach",
+                 "version":  "1.0.0",
+                 "sdkVersion":  "54.0.0",
+                 "orientation":  "portrait",
+                 "userInterfaceStyle":  "dark",
+                 "assetBundlePatterns":  [
+                                             "**/*"
+                                         ],
+                 "android":  {
+                                 "package":  "com.kavach.app"
+                             },
+                 "extra":  {
+                               "API_BASE_URL":  "http:///api",
+                               "MOCK_PLATFORM_API_URL":  "http://",
+                               "eas":  {
+                                           "projectId":  "37422371-a46d-4a1b-b67d-df9e30dcaddc"
+                                       }
+                           },
+                 "plugins":  [
+                                 "expo-font"
+                             ]
+             }
 }

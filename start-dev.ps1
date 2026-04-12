@@ -7,6 +7,52 @@ $mockPath = Join-Path $root 'mock-platform-api'
 $mobilePath = Join-Path $root 'mobile'
 $pidFile = Join-Path $root '.dev-pids.json'
 
+function Get-PreferredLanIp {
+    $wifi = Get-NetIPConfiguration | Where-Object {
+        $_.InterfaceAlias -eq 'Wi-Fi' -and
+        $_.IPv4Address -ne $null -and
+        $_.IPv4DefaultGateway -ne $null
+    } | Select-Object -First 1
+
+    if ($wifi) {
+        return $wifi.IPv4Address.IPAddress
+    }
+
+    $fallback = Get-NetIPConfiguration | Where-Object {
+        $_.IPv4Address -ne $null -and
+        $_.IPv4DefaultGateway -ne $null
+    } | Select-Object -First 1
+
+    if ($fallback) {
+        return $fallback.IPv4Address.IPAddress
+    }
+
+    return '127.0.0.1'
+}
+
+function Sync-MobileApiIp {
+    param(
+        [string]$ProjectRoot,
+        [string]$IpAddress
+    )
+
+    $mobileDir = Join-Path $ProjectRoot 'mobile'
+    $envPath = Join-Path $mobileDir '.env'
+    $appJsonPath = Join-Path $mobileDir 'app.json'
+
+    $apiUrl = "http://${IpAddress}:3000/api"
+    $mockUrl = "http://${IpAddress}:3001"
+
+    "API_BASE_URL=$apiUrl`nMOCK_PLATFORM_API_URL=$mockUrl" | Set-Content -Path $envPath -Encoding UTF8
+
+    $json = Get-Content -Raw -Path $appJsonPath | ConvertFrom-Json
+    $json.expo.extra.API_BASE_URL = $apiUrl
+    $json.expo.extra.MOCK_PLATFORM_API_URL = $mockUrl
+    $json | ConvertTo-Json -Depth 10 | Set-Content -Path $appJsonPath -Encoding UTF8
+
+    Write-Host "Mobile API target synced to $IpAddress"
+}
+
 function Start-ToolProcess {
     param(
         [string]$Name,
@@ -30,6 +76,10 @@ function Start-ToolProcess {
 
 Write-Host 'Starting docker services (postgres, redis)...'
 Set-Location $root
+
+$lanIp = Get-PreferredLanIp
+Sync-MobileApiIp -ProjectRoot $root -IpAddress $lanIp
+
 docker compose up -d
 if ($LASTEXITCODE -ne 0) {
     Write-Host 'Docker services failed to start. Start Docker Desktop and rerun .\start-dev.ps1'
