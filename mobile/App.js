@@ -50,6 +50,15 @@ export default function App() {
       }
     };
 
+    const isSessionValid = async (workerId) => {
+      try {
+        const res = await api.get(`/worker/${workerId}`);
+        return !!res?.data?.data?.worker_id;
+      } catch (_error) {
+        return false;
+      }
+    };
+
     const bootstrap = async () => {
       try {
         if (!fontsLoaded) return;
@@ -59,11 +68,18 @@ export default function App() {
         ]);
 
         if (mountedRef.current && workerId && zoneId) {
-          setInitialRoute('MainTabs');
-          await postActivity(workerId, zoneId);
-          activityIntervalRef.current = setInterval(() => {
-            postActivity(workerId, zoneId);
-          }, 5 * 60 * 1000);
+          const valid = await isSessionValid(workerId);
+
+          if (valid) {
+            setInitialRoute('MainTabs');
+            await postActivity(workerId, zoneId);
+            activityIntervalRef.current = setInterval(() => {
+              postActivity(workerId, zoneId);
+            }, 5 * 60 * 1000);
+          } else {
+            await AsyncStorage.multiRemove(['worker_id', 'zone_id', 'worker_name', 'tier']);
+            setInitialRoute('Onboarding');
+          }
         }
       } finally {
         if (mountedRef.current && fontsLoaded) {
