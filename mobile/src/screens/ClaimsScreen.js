@@ -1,30 +1,31 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
-  TouchableOpacity,
+  ScrollView,
   RefreshControl,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import colors from '../theme/colors';
 import globalStyles from '../theme/globalStyles';
 import api from '../services/api';
 
-const FILTERS = ['all', 'paid', 'processing', 'flagged'];
-
 export default function ClaimsScreen() {
   const [claims, setClaims] = useState([]);
-  const [filter, setFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadClaims = useCallback(async () => {
-    setRefreshing(true);
+  const loadClaims = useCallback(async (showSpinner = false) => {
+    if (showSpinner) {
+      setRefreshing(true);
+    }
+
     try {
       const workerId = await AsyncStorage.getItem('worker_id');
       if (!workerId) {
@@ -39,43 +40,61 @@ export default function ClaimsScreen() {
         error?.response?.data?.error || 'Could not load claims. Please check API connectivity.';
       Alert.alert('Claims unavailable', message);
     } finally {
-      setRefreshing(false);
+      if (showSpinner) {
+        setRefreshing(false);
+      }
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadClaims();
+      loadClaims(true);
+
+      // Poll while the screen is focused so users can see status move from processing to processed.
+      const interval = setInterval(() => {
+        loadClaims(false);
+      }, 2000);
+
+      return () => clearInterval(interval);
     }, [loadClaims])
   );
 
-  const filteredClaims = useMemo(() => {
-    if (filter === 'all') {
-      return claims;
-    }
-    return claims.filter((claim) => claim.status === filter);
-  }, [claims, filter]);
+  const processingClaims = claims.filter((claim) => claim.status === 'processing');
+  const processedClaims = claims.filter((claim) => claim.status === 'paid' || claim.status === 'processed');
+  const otherClaims = claims.filter(
+    (claim) => claim.status !== 'processing' && claim.status !== 'paid' && claim.status !== 'processed'
+  );
 
-  const renderClaim = ({ item }) => {
-    const tone =
-      item.status === 'paid'
-        ? colors.accent
-        : item.status === 'processing'
-        ? colors.warn
-        : item.status === 'flagged'
-        ? colors.danger
-        : colors.info;
+  const renderClaimRow = (item) => {
+    const isProcessing = item.status === 'processing';
+    const isProcessed = item.status === 'paid' || item.status === 'processed';
 
     return (
-      <View style={styles.claimRow}>
-        <View style={[styles.dot, { backgroundColor: tone }]} />
+      <View key={item.claim_id} style={styles.claimRow}>
         <View style={styles.claimTextWrap}>
-          <Text style={styles.claimTitle}>{item.event_type || 'Auto claim'}</Text>
+          <Text style={styles.claimTitle}>{item.disruption_type || 'Auto claim'}</Text>
           <Text style={styles.claimMeta}>
-            {item.status || 'processing'} | {item.triggered_at ? new Date(item.triggered_at).toLocaleString() : '-'}
+            {item.created_at ? new Date(item.created_at).toLocaleString() : '-'}
           </Text>
         </View>
         <Text style={styles.claimAmount}>Rs {item.payout_amount || 0}</Text>
+        <View style={styles.statusWrap}>
+          {isProcessing ? <ActivityIndicator size="small" color={colors.warn} /> : null}
+          {isProcessed ? <Ionicons name="checkmark-circle" size={16} color={colors.accent} /> : null}
+          {!isProcessing && !isProcessed ? <Ionicons name="alert-circle" size={16} color={colors.info} /> : null}
+          <Text style={styles.statusText}>
+            {isProcessing ? 'PROCESSING' : isProcessed ? 'PROCESSED' : String(item.status || 'UNKNOWN').toUpperCase()}
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
+  const renderSection = (title, data, emptyMessage) => {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {data.length ? data.map((item) => renderClaimRow(item)) : <Text style={styles.emptyText}>{emptyMessage}</Text>}
       </View>
     );
   };
@@ -85,33 +104,22 @@ export default function ClaimsScreen() {
       <LinearGradient colors={['#08131F', '#10243A', '#16324A']} style={globalStyles.gradientBackground}>
         <View style={styles.container}>
           <Text style={styles.title}>Claims</Text>
-          <Text style={styles.subtitle}>Automatically generated payouts</Text>
+          <Text style={styles.subtitle}>Auto-payout status updates in real time</Text>
 
-          <View style={styles.filterRow}>
-            {FILTERS.map((item) => {
-              const active = item === filter;
-              return (
-                <TouchableOpacity
-                  key={item}
-                  onPress={() => setFilter(item)}
-                  style={[styles.filterPill, active && styles.filterPillActive]}
-                >
-                  <Text style={[styles.filterText, active && styles.filterTextActive]}>{item}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <FlatList
-            data={filteredClaims}
-            keyExtractor={(item) => item.claim_id}
-            renderItem={renderClaim}
+          <ScrollView
             contentContainerStyle={styles.listContent}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={loadClaims} tintColor={colors.accent} />
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => loadClaims(true)}
+                tintColor={colors.accent}
+              />
             }
-            ListEmptyComponent={<Text style={styles.emptyText}>No claims in this filter yet.</Text>}
-          />
+          >
+            {renderSection('Processing', processingClaims, 'No claims are processing right now.')}
+            {renderSection('Processed', processedClaims, 'No claims have been processed yet.')}
+            {otherClaims.length ? renderSection('Other', otherClaims, '') : null}
+          </ScrollView>
         </View>
       </LinearGradient>
     </SafeAreaView>
@@ -135,36 +143,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
   },
-  filterRow: {
-    marginTop: 12,
-    marginBottom: 8,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  filterPill: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    backgroundColor: colors.bgCardSoft,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  filterPillActive: {
-    backgroundColor: colors.chip,
-    borderColor: colors.accent,
-  },
-  filterText: {
-    textTransform: 'uppercase',
-    fontFamily: 'Outfit_600SemiBold',
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
-  filterTextActive: {
-    color: colors.accentSoft,
-  },
   listContent: {
     paddingBottom: 24,
+    paddingTop: 8,
+  },
+  section: {
+    marginTop: 12,
+  },
+  sectionTitle: {
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 8,
   },
   claimRow: {
     marginTop: 10,
@@ -176,12 +166,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  dot: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    marginRight: 10,
-  },
   claimTextWrap: {
     flex: 1,
     paddingRight: 8,
@@ -190,6 +174,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_600SemiBold',
     fontSize: 13,
     color: colors.textPrimary,
+    textTransform: 'capitalize',
   },
   claimMeta: {
     marginTop: 3,
@@ -201,11 +186,24 @@ const styles = StyleSheet.create({
     fontFamily: 'SpaceMono_400Regular',
     fontSize: 12,
     color: colors.accentSoft,
+    marginRight: 10,
+  },
+  statusWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 110,
+    justifyContent: 'flex-end',
+  },
+  statusText: {
+    marginLeft: 6,
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 11,
+    color: colors.textPrimary,
   },
   emptyText: {
-    marginTop: 18,
+    marginTop: 4,
     fontFamily: 'Outfit_500Medium',
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textSecondary,
   },
 });

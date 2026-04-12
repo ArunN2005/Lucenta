@@ -6,10 +6,6 @@ const razorpay = process.env.RAZORPAY_KEY_ID ? new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 }) : null;
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function initiateUpiPayout(worker, claim) {
   // Hackathon Demo enhancement:
   // Instead of failing and immediately marking as paid, we will intentionally fork
@@ -31,7 +27,7 @@ async function initiateUpiPayout(worker, claim) {
         [payoutId, claim.claim_id]
       );
     }
-  }, 4000); // 4 seconds delay to let user see "Processing"
+  }, 5000); // 5 seconds delay to let user see "Processing"
 
   return { success: true, status: 'processing_async' };
 }
