@@ -25,11 +25,14 @@ export default function DashboardScreen({ navigation }) {
   const [policy, setPolicy] = useState(null);
   const [claims, setClaims] = useState([]);
   const [activeDisruptions, setActiveDisruptions] = useState([]);
+  const [liveContext, setLiveContext] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [errorText, setErrorText] = useState('');
 
-  const loadData = useCallback(async () => {
-    setRefreshing(true);
+  const loadData = useCallback(async (showSpinner = true) => {
+    if (showSpinner) {
+      setRefreshing(true);
+    }
     setErrorText('');
 
     try {
@@ -50,19 +53,37 @@ export default function DashboardScreen({ navigation }) {
       setPolicy(policyRes?.data?.data || null);
       setClaims(claimsRes?.data?.data || []);
       setActiveDisruptions(disruptionRes?.data?.data || []);
+
+      const zoneId = workerRes?.data?.data?.zone_id;
+      if (zoneId) {
+        try {
+          const liveRes = await api.get(`/zones/${zoneId}/live-context`);
+          setLiveContext(liveRes?.data?.data || null);
+        } catch (_err) {
+          setLiveContext(null);
+        }
+      }
     } catch (error) {
       const message =
         error?.response?.data?.error ||
         'Could not refresh dashboard. Check backend and network connectivity.';
       setErrorText(message);
     } finally {
-      setRefreshing(false);
+      if (showSpinner) {
+        setRefreshing(false);
+      }
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
+      loadData(true);
+
+      const interval = setInterval(() => {
+        loadData(false);
+      }, 30000);
+
+      return () => clearInterval(interval);
     }, [loadData])
   );
 
@@ -130,6 +151,44 @@ export default function DashboardScreen({ navigation }) {
             <View style={styles.gridItem}>
               <Text style={styles.gridLabel}>Days left</Text>
               <Text style={styles.gridValue}>{policy?.days_remaining || 0}</Text>
+            </View>
+          </View>
+
+          <View style={[globalStyles.card, styles.liveCard]}>
+            <Text style={styles.cardTitle}>Live Zone Context</Text>
+            <View style={styles.liveGrid}>
+              <View style={styles.liveItem}>
+                <Text style={styles.gridLabel}>Weather</Text>
+                <Text style={styles.gridValue}>{liveContext?.weather?.condition || 'Unknown'}</Text>
+              </View>
+              <View style={styles.liveItem}>
+                <Text style={styles.gridLabel}>Temp</Text>
+                <Text style={styles.gridValue}>{liveContext?.weather?.temp_c ?? '-'} C</Text>
+              </View>
+              <View style={styles.liveItem}>
+                <Text style={styles.gridLabel}>AQI</Text>
+                <Text style={styles.gridValue}>{liveContext?.weather?.aqi ?? '-'}</Text>
+              </View>
+              <View style={styles.liveItem}>
+                <Text style={styles.gridLabel}>Active strikes</Text>
+                <Text style={styles.gridValue}>{liveContext?.active_strikes ?? 0}</Text>
+              </View>
+            </View>
+
+            <View style={styles.trafficBox}>
+              <View style={styles.trafficHeader}>
+                <Text style={styles.trafficTitle}>Traffic</Text>
+                <View style={styles.disabledPill}>
+                  <Text style={styles.disabledPillText}>Disabled</Text>
+                </View>
+              </View>
+              <Text style={styles.trafficMessage}>{liveContext?.traffic?.message || 'Currently inside building'}</Text>
+              <Text style={styles.trafficMeta}>
+                Road load index: {liveContext?.traffic?.road_load_index ?? '--'}
+              </Text>
+              <Text style={styles.trafficMeta}>
+                Lat/Lng: {liveContext?.latitude ?? worker?.lat ?? '-'}, {liveContext?.longitude ?? worker?.lng ?? '-'}
+              </Text>
             </View>
           </View>
 
@@ -334,5 +393,59 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_500Medium',
     fontSize: 13,
     color: colors.textPrimary,
+  },
+  liveCard: {
+    marginBottom: 2,
+  },
+  liveGrid: {
+    marginTop: 8,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  liveItem: {
+    width: '48%',
+    marginVertical: 4,
+  },
+  trafficBox: {
+    marginTop: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.bgCardSoft,
+    padding: 10,
+  },
+  trafficHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  trafficTitle: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 13,
+    color: colors.textPrimary,
+  },
+  disabledPill: {
+    borderRadius: 999,
+    backgroundColor: 'rgba(245, 159, 98, 0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  disabledPillText: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 10,
+    color: colors.warn,
+  },
+  trafficMessage: {
+    marginTop: 6,
+    fontFamily: 'Outfit_500Medium',
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  trafficMeta: {
+    marginTop: 4,
+    fontFamily: 'SpaceMono_400Regular',
+    fontSize: 11,
+    color: colors.textMuted,
   },
 });

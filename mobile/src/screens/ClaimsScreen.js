@@ -21,6 +21,49 @@ import colors from '../theme/colors';
 import globalStyles from '../theme/globalStyles';
 import api from '../services/api';
 
+function formatSignalLabel(value) {
+  return String(value || 'signal')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+function formatSignalValue(value) {
+  if (value === null || value === undefined) {
+    return '-';
+  }
+  const num = Number(value);
+  if (Number.isFinite(num)) {
+    return Number(num.toFixed(2));
+  }
+  return String(value);
+}
+
+function lifecycleSteps(claim) {
+  return [
+    {
+      key: 'triggered',
+      label: 'Triggered',
+      icon: 'flash',
+      done: true,
+      time: claim.disruption_started_at || claim.created_at,
+    },
+    {
+      key: 'processing',
+      label: 'Processing',
+      icon: 'sync',
+      done: true,
+      time: claim.created_at,
+    },
+    {
+      key: 'paid',
+      label: 'Paid',
+      icon: 'checkmark-circle',
+      done: !!claim.paid_at || claim.status === 'paid' || claim.status === 'processed',
+      time: claim.paid_at,
+    },
+  ];
+}
+
 export default function ClaimsScreen() {
   const [claims, setClaims] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -79,6 +122,7 @@ export default function ClaimsScreen() {
   const renderClaimRow = (item) => {
     const isProcessing = item.status === 'processing';
     const isProcessed = item.status === 'paid' || item.status === 'processed';
+    const steps = lifecycleSteps(item);
 
     const onPress = () => {
       if (isProcessed) {
@@ -94,20 +138,56 @@ export default function ClaimsScreen() {
         activeOpacity={isProcessed ? 0.82 : 1}
         onPress={onPress}
       >
-        <View style={styles.claimTextWrap}>
-          <Text style={styles.claimTitle}>{item.disruption_type || 'Auto claim'}</Text>
-          <Text style={styles.claimMeta}>
-            {item.created_at ? new Date(item.created_at).toLocaleString() : '-'}
-          </Text>
-        </View>
-        <Text style={styles.claimAmount}>Rs {item.payout_amount || 0}</Text>
-        <View style={styles.statusWrap}>
-          {isProcessing ? <ActivityIndicator size="small" color={colors.warn} /> : null}
-          {isProcessed ? <Ionicons name="checkmark-circle" size={16} color={colors.accent} /> : null}
-          {!isProcessing && !isProcessed ? <Ionicons name="alert-circle" size={16} color={colors.info} /> : null}
-          <Text style={styles.statusText}>
-            {isProcessing ? 'PROCESSING' : isProcessed ? 'PROCESSED' : String(item.status || 'UNKNOWN').toUpperCase()}
-          </Text>
+        <View style={styles.claimBody}>
+          <View style={styles.claimTopRow}>
+            <View style={styles.claimTextWrap}>
+              <Text style={styles.claimTitle}>{item.disruption_type || 'Auto claim'}</Text>
+              <Text style={styles.claimMeta}>
+                {item.created_at ? new Date(item.created_at).toLocaleString() : '-'}
+              </Text>
+            </View>
+            <Text style={styles.claimAmount}>Rs {item.payout_amount || 0}</Text>
+            <View style={styles.statusWrap}>
+              {isProcessing ? <ActivityIndicator size="small" color={colors.warn} /> : null}
+              {isProcessed ? <Ionicons name="checkmark-circle" size={16} color={colors.accent} /> : null}
+              {!isProcessing && !isProcessed ? <Ionicons name="alert-circle" size={16} color={colors.info} /> : null}
+              <Text style={styles.statusText}>
+                {isProcessing ? 'PROCESSING' : isProcessed ? 'PROCESSED' : String(item.status || 'UNKNOWN').toUpperCase()}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.timelineWrap}>
+            {steps.map((step, idx) => {
+              const activeNow = step.key === 'processing' && isProcessing;
+              const iconColor = step.done ? colors.accent : colors.textMuted;
+              return (
+                <View key={step.key} style={styles.timelineStep}>
+                  <View style={[styles.timelineIconWrap, !step.done && styles.timelineIconPending]}>
+                    {activeNow ? (
+                      <ActivityIndicator size="small" color={colors.warn} />
+                    ) : (
+                      <Ionicons name={step.icon} size={14} color={iconColor} />
+                    )}
+                  </View>
+                  <Text style={styles.timelineLabel}>{step.label}</Text>
+                  <Text style={styles.timelineTime}>{step.time ? new Date(step.time).toLocaleTimeString() : '--:--'}</Text>
+                  {idx < steps.length - 1 ? <View style={[styles.timelineLine, !step.done && styles.timelineLinePending]} /> : null}
+                </View>
+              );
+            })}
+          </View>
+
+          <View style={styles.explainabilityCard}>
+            <Text style={styles.explainabilityTitle}>Why this payout happened</Text>
+            <Text style={styles.explainabilityText}>
+              Signal A: {formatSignalLabel(item.signal_a_type)} = {formatSignalValue(item.signal_a_value)}
+            </Text>
+            <Text style={styles.explainabilityText}>
+              Signal B: {formatSignalLabel(item.signal_b_type)} = {formatSignalValue(item.signal_b_value)}
+            </Text>
+            <Text style={styles.explainabilityText}>Payout rule: {item.payout_percentage || 0}% coverage</Text>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -244,6 +324,11 @@ const styles = StyleSheet.create({
     borderColor: colors.divider,
     backgroundColor: colors.bgCard,
     padding: 12,
+  },
+  claimBody: {
+    width: '100%',
+  },
+  claimTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -280,6 +365,76 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_600SemiBold',
     fontSize: 11,
     color: colors.textPrimary,
+  },
+  timelineWrap: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+    paddingTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  timelineStep: {
+    flex: 1,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  timelineIconWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(64, 213, 160, 0.1)',
+  },
+  timelineIconPending: {
+    borderColor: colors.textMuted,
+    backgroundColor: 'rgba(137, 165, 190, 0.12)',
+  },
+  timelineLabel: {
+    marginTop: 5,
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 10,
+    color: colors.textSecondary,
+  },
+  timelineTime: {
+    marginTop: 2,
+    fontFamily: 'SpaceMono_400Regular',
+    fontSize: 9,
+    color: colors.textMuted,
+  },
+  timelineLine: {
+    position: 'absolute',
+    top: 11,
+    left: '66%',
+    width: '70%',
+    height: 1,
+    backgroundColor: colors.accent,
+  },
+  timelineLinePending: {
+    backgroundColor: colors.textMuted,
+  },
+  explainabilityCard: {
+    marginTop: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.bgCardSoft,
+    padding: 10,
+  },
+  explainabilityTitle: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 12,
+    color: colors.accentSoft,
+    marginBottom: 4,
+  },
+  explainabilityText: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   emptyText: {
     marginTop: 4,

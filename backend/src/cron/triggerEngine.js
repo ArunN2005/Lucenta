@@ -163,7 +163,7 @@ async function checkZoneTriggers(zone) {
     result.push(
       await processTrigger(zone, {
         type: 'heavy_rain',
-        signalAType: 'owm_rain_or_code',
+        signalAType: 'weather_rainfall_or_storm_code',
         signalAValue: Math.max(rain1h, weatherCode),
         signalBType: 'order_volume_drop_percentage',
         signalBValue: Number(orderVol.volume_drop_percentage || 0),
@@ -182,7 +182,7 @@ async function checkZoneTriggers(zone) {
     result.push(
       await processTrigger(zone, {
         type: 'extreme_heat',
-        signalAType: 'owm_temp_or_aqi',
+        signalAType: 'temperature_or_aqi',
         signalAValue: Math.max(tempKelvin, aqiValue),
         signalBType: 'active_rider_drop_percentage',
         signalBValue: Number(activeRiders.drop_percentage || 0),
@@ -202,7 +202,7 @@ async function checkZoneTriggers(zone) {
     result.push(
       await processTrigger(zone, {
         type: 'platform_outage',
-        signalAType: 'platform_heartbeat_status',
+        signalAType: 'minutes_since_platform_heartbeat',
         signalAValue: minutesSinceHeartbeat,
         signalBType: 'available_orders',
         signalBValue: Number(orders.available_orders || 0),
