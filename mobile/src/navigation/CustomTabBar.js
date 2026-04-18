@@ -7,6 +7,7 @@ const icons = {
   Home: 'shield-checkmark',
   Claims: 'document-text',
   Demo: 'flask',
+  Admin: 'analytics',
   Profile: 'person',
 };
 

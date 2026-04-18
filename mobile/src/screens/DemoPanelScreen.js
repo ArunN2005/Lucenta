@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import api from '../services/api';
 import colors from '../theme/colors';
 import globalStyles from '../theme/globalStyles';
@@ -20,6 +21,7 @@ export default function DemoPanelScreen() {
   const [selectedZoneId, setSelectedZoneId] = useState('');
   const [nextRunSeconds, setNextRunSeconds] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const pollingRef = useRef(false);
 
   const selectedZone = useMemo(
     () => zones.find((item) => item.zone_id === selectedZoneId),
@@ -27,6 +29,11 @@ export default function DemoPanelScreen() {
   );
 
   const loadState = async () => {
+    if (pollingRef.current) {
+      return;
+    }
+
+    pollingRef.current = true;
     setRefreshing(true);
     try {
       const [zonesRes, statusRes] = await Promise.all([
@@ -46,25 +53,33 @@ export default function DemoPanelScreen() {
         error?.response?.data?.error || 'Unable to load demo controls. Check backend connection.';
       Alert.alert('Demo unavailable', message);
     } finally {
+      pollingRef.current = false;
       setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    loadState();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      loadState();
 
-  useEffect(() => {
-    const timer = setInterval(async () => {
-      try {
-        const statusRes = await api.get('/demo/trigger-status');
-        setNextRunSeconds(statusRes?.data?.data?.next_run_in_seconds ?? null);
-      } catch (_error) {
-      }
-    }, 1000);
+      const timer = setInterval(async () => {
+        if (pollingRef.current) {
+          return;
+        }
 
-    return () => clearInterval(timer);
-  }, []);
+        pollingRef.current = true;
+        try {
+          const statusRes = await api.get('/demo/trigger-status');
+          setNextRunSeconds(statusRes?.data?.data?.next_run_in_seconds ?? null);
+        } catch (_error) {
+        } finally {
+          pollingRef.current = false;
+        }
+      }, 5000);
+
+      return () => clearInterval(timer);
+    }, [selectedZoneId])
+  );
 
   const runTrigger = async (type) => {
     if (!selectedZoneId) {
@@ -106,6 +121,20 @@ export default function DemoPanelScreen() {
     } catch (error) {
       const message = error?.response?.data?.error || 'Could not reset selected zone.';
       Alert.alert('Reset failed', message);
+    }
+  };
+
+  const simulateGpsSpoof = async () => {
+    if (!selectedZoneId) {
+      return;
+    }
+
+    try {
+      const result = await api.post(`/demo/simulate-gps-spoof/${selectedZoneId}`);
+      Alert.alert('Telemetry seeded', result?.data?.data?.message || 'GPS spoof sample inserted.');
+    } catch (error) {
+      const message = error?.response?.data?.error || 'Could not simulate GPS spoof telemetry.';
+      Alert.alert('Simulation failed', message);
     }
   };
 
@@ -163,6 +192,10 @@ export default function DemoPanelScreen() {
 
             <TouchableOpacity style={styles.secondaryAction} onPress={resetZone}>
               <Text style={styles.secondaryActionText}>Reset Selected Zone</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.secondaryAction} onPress={simulateGpsSpoof}>
+              <Text style={styles.secondaryActionText}>Simulate GPS Spoof (Fraud Test)</Text>
             </TouchableOpacity>
           </View>
 

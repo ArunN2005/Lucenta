@@ -75,6 +75,36 @@ CREATE TABLE IF NOT EXISTS worker_activity (
   was_active_30min_before_disruption BOOLEAN DEFAULT FALSE
 );
 
+CREATE TABLE IF NOT EXISTS worker_activity_log (
+  log_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  worker_id UUID REFERENCES workers(worker_id),
+  zone_id UUID REFERENCES zones(zone_id),
+  latitude DECIMAL(10,6),
+  longitude DECIMAL(10,6),
+  accuracy_meters DECIMAL(10,2),
+  speed_kmh DECIMAL(10,2),
+  is_mock_location BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS fraud_events (
+  fraud_event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  claim_id UUID REFERENCES claims(claim_id),
+  worker_id UUID REFERENCES workers(worker_id),
+  disruption_id UUID REFERENCES disruptions(disruption_id),
+  fraud_score INTEGER NOT NULL,
+  fraud_status VARCHAR(20) NOT NULL,
+  flags JSONB NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_worker_activity_log_worker_created
+  ON worker_activity_log (worker_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_fraud_events_claim
+  ON fraud_events (claim_id, created_at DESC);
+
 INSERT INTO zones (zone_name, pin_code, zone_type, dark_store_tier, lat, lng, disruption_count_12m, disruption_count_24m) VALUES
 ('HSR Layout', '560102', 'residential_dense', 'zepto_gold', 12.9116, 77.6389, 8, 14),
 ('Koramangala', '560034', 'mixed', 'zepto_standard', 12.9352, 77.6245, 6, 11),

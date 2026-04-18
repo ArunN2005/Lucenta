@@ -79,3 +79,15 @@ No manual claim form needed.
 - Source code repo/folder
 - This checklist + README
 - Optional: one-page architecture summary screenshot
+
+## Week 6 Final Additions (Must Show)
+
+- Advanced Fraud Detection:
+  - GPS spoof catch (simulate from Demo Panel and show blocked/review claim).
+  - Fake weather anomaly defense (explain historical-signal comparison in architecture).
+- Instant Payout System (Simulated):
+  - Show processing to paid lifecycle.
+  - Mention simulated rails used by backend: razorpay_test, stripe_sandbox, upi_simulator.
+- Intelligent Dashboard:
+  - Worker view: earnings protected, active weekly coverage.
+  - Admin view: loss ratio, disruption mix, next-week forecast by zone.

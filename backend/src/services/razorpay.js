@@ -6,30 +6,53 @@ const razorpay = process.env.RAZORPAY_KEY_ID ? new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 }) : null;
 
+function chooseProvider(claimId) {
+  const configured = String(process.env.PAYOUT_PROVIDER || 'auto').toLowerCase();
+  if (configured && configured !== 'auto') {
+    return configured;
+  }
+
+  const id = String(claimId || '').replace(/-/g, '');
+  const seed = parseInt(id.slice(0, 8), 16);
+  const providers = ['razorpay_test', 'stripe_sandbox', 'upi_simulator'];
+  return providers[Math.abs(seed || Date.now()) % providers.length];
+}
+
+function simulateGatewayReference(provider) {
+  const ts = Date.now();
+  if (provider === 'stripe_sandbox') {
+    return `stp_test_${ts}`;
+  }
+  if (provider === 'upi_simulator') {
+    return `upi_sim_${ts}`;
+  }
+  return `razor_test_${ts}`;
+}
+
 async function initiateUpiPayout(worker, claim) {
-  // Hackathon Demo enhancement:
-  // Instead of failing and immediately marking as paid, we will intentionally fork
-  // the promise here without awaiting so that the trigger engine can finish and the row is 
-  // returned to the app as 'processing'. Then it resolves a few seconds later.
-  
+  const provider = chooseProvider(claim.claim_id);
+
+  // We intentionally settle asynchronously to show a visible processing window in the demo UX.
   setTimeout(async () => {
     try {
-      if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-        throw new Error('Razorpay keys missing. Falling back to simulation.');
+      if (provider === 'razorpay_test' && razorpay) {
+        // Real Razorpay test mode can be wired here if needed.
       }
-      throw new Error('Using simulated payouts for hackathon demo reliability.');
-    } catch (_e) {
-      const payoutId = `pay_test_${Date.now()}`;
+
+      const reference = simulateGatewayReference(provider);
+      const payoutId = `${provider}:${reference}`;
       await pool.query(
         `UPDATE claims
          SET status = 'paid', paid_at = NOW(), razorpay_payout_id = $1
-         WHERE claim_id = $2`,
+         WHERE claim_id = $2 AND status = 'processing'`,
         [payoutId, claim.claim_id]
       );
+    } catch (_e) {
+      // For demo reliability we do not fail hard on simulated gateway exceptions.
     }
-  }, 5000); // 5 seconds delay to let user see "Processing"
+  }, 3500);
 
-  return { success: true, status: 'processing_async' };
+  return { success: true, status: 'processing_async', provider };
 }
 
 module.exports = { initiateUpiPayout, razorpay };

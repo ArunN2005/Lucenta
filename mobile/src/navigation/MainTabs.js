@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import DashboardScreen from '../screens/DashboardScreen';
 import ClaimsScreen from '../screens/ClaimsScreen';
 import DemoPanelScreen from '../screens/DemoPanelScreen';
+import AdminInsightsScreen from '../screens/AdminInsightsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CustomTabBar from './CustomTabBar';
 
@@ -17,6 +18,7 @@ export default function MainTabs() {
       <Tab.Screen name="Home" component={DashboardScreen} />
       <Tab.Screen name="Claims" component={ClaimsScreen} />
       <Tab.Screen name="Demo" component={DemoPanelScreen} />
+      <Tab.Screen name="Admin" component={AdminInsightsScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

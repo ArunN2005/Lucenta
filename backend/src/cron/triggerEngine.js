@@ -43,7 +43,7 @@ async function createDisruption(zoneId, disruptionType, signalAType, signalAValu
 
 async function eligibleWorkers(zoneId) {
   const q = await pool.query(
-    `SELECT w.*, p.policy_id, p.adjusted_coverage_cap
+    `SELECT w.*, p.policy_id, p.adjusted_coverage_cap, wa.last_active_at
      FROM workers w
      JOIN policies p ON p.worker_id = w.worker_id
      JOIN worker_activity wa ON wa.worker_id = w.worker_id

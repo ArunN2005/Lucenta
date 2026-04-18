@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -69,8 +69,15 @@ export default function ClaimsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [workerName, setWorkerName] = useState('Delivery Partner');
   const [selectedProcessedClaim, setSelectedProcessedClaim] = useState(null);
+  const loadingRef = useRef(false);
 
   const loadClaims = useCallback(async (showSpinner = false) => {
+    if (loadingRef.current) {
+      return;
+    }
+
+    loadingRef.current = true;
+
     if (showSpinner) {
       setRefreshing(true);
     }
@@ -94,6 +101,7 @@ export default function ClaimsScreen() {
         error?.response?.data?.error || 'Could not load claims. Please check API connectivity.';
       Alert.alert('Claims unavailable', message);
     } finally {
+      loadingRef.current = false;
       if (showSpinner) {
         setRefreshing(false);
       }
@@ -114,9 +122,16 @@ export default function ClaimsScreen() {
   );
 
   const processingClaims = claims.filter((claim) => claim.status === 'processing');
+  const fraudReviewClaims = claims.filter((claim) => claim.status === 'fraud_review');
+  const fraudBlockedClaims = claims.filter((claim) => claim.status === 'fraud_blocked');
   const processedClaims = claims.filter((claim) => claim.status === 'paid' || claim.status === 'processed');
   const otherClaims = claims.filter(
-    (claim) => claim.status !== 'processing' && claim.status !== 'paid' && claim.status !== 'processed'
+    (claim) =>
+      claim.status !== 'processing' &&
+      claim.status !== 'paid' &&
+      claim.status !== 'processed' &&
+      claim.status !== 'fraud_review' &&
+      claim.status !== 'fraud_blocked'
   );
 
   const renderClaimRow = (item) => {
@@ -187,6 +202,12 @@ export default function ClaimsScreen() {
               Signal B: {formatSignalLabel(item.signal_b_type)} = {formatSignalValue(item.signal_b_value)}
             </Text>
             <Text style={styles.explainabilityText}>Payout rule: {item.payout_percentage || 0}% coverage</Text>
+            {item.razorpay_payout_id ? (
+              <Text style={styles.explainabilityText}>Payout gateway: {String(item.razorpay_payout_id).split(':')[0]}</Text>
+            ) : null}
+            {item.fraud_status && item.fraud_status !== 'clear' ? (
+              <Text style={[styles.explainabilityText, { color: colors.warn }]}>Fraud status: {item.fraud_status} (score: {item.fraud_score || 0})</Text>
+            ) : null}
           </View>
         </View>
       </TouchableOpacity>
@@ -240,6 +261,8 @@ export default function ClaimsScreen() {
             }
           >
             {renderSection('Processing', processingClaims, 'No claims are processing right now.')}
+            {renderSection('Fraud Review', fraudReviewClaims, 'No claims are waiting for anti-fraud review.')}
+            {renderSection('Fraud Blocked', fraudBlockedClaims, 'No claims were blocked by anti-fraud checks.')}
             {renderSection('Processed', processedClaims, 'No claims have been processed yet.')}
             {otherClaims.length ? renderSection('Other', otherClaims, '') : null}
           </ScrollView>

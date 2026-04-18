@@ -14,8 +14,8 @@
                                  "package":  "com.kavach.app"
                              },
                  "extra":  {
-                               "API_BASE_URL":  "http:///api",
-                               "MOCK_PLATFORM_API_URL":  "http://",
+                               "API_BASE_URL":  "http://192.168.29.195:3000/api",
+                               "MOCK_PLATFORM_API_URL":  "http://192.168.29.195:3001",
                                "eas":  {
                                            "projectId":  "37422371-a46d-4a1b-b67d-df9e30dcaddc"
                                        }

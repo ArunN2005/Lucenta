@@ -13,6 +13,9 @@ const claimsRoutes = require('./routes/claims');
 const disruptionsRoutes = require('./routes/disruptions');
 const zonesRoutes = require('./routes/zones');
 const demoRoutes = require('./routes/demo');
+const adminRoutes = require('./routes/admin');
+const paymentsRoutes = require('./routes/payments');
+const { ensureFraudTables } = require('./services/fraud');
 
 const app = express();
 
@@ -35,10 +38,13 @@ app.use('/api/claims', claimsRoutes);
 app.use('/api/disruptions', disruptionsRoutes);
 app.use('/api/zones', zonesRoutes);
 app.use('/api/demo', demoRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/payments', paymentsRoutes);
 
 const port = process.env.PORT || 3000;
 
 app.listen(port, () => {
   console.log(`Kavach backend running on port ${port}`);
+  ensureFraudTables().catch((e) => console.error('Fraud table bootstrap error:', e.message));
   scheduleTriggerEngine();
 });

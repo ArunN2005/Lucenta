@@ -13,6 +13,7 @@ const tierConfig = {
 };
 
 router.post('/register', async (req, res) => {
+  const client = await pool.connect();
   try {
     const { name, phone, upi_id, zone_id, tier } = req.body;
 
@@ -26,14 +27,30 @@ router.post('/register', async (req, res) => {
     }
     const zone = zoneRes.rows[0];
 
-    const workerRes = await pool.query(
-      `INSERT INTO workers (name, phone, upi_id, zone_id)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [name, phone, upi_id, zone_id]
-    );
+    await client.query('BEGIN');
 
-    const worker = workerRes.rows[0];
+    // Reuse worker record for repeated onboarding attempts on the same phone.
+    const existingWorkerRes = await client.query('SELECT * FROM workers WHERE phone = $1 LIMIT 1', [phone]);
+    let worker;
+    if (existingWorkerRes.rowCount) {
+      const updatedWorkerRes = await client.query(
+        `UPDATE workers
+         SET name = $1, upi_id = $2, zone_id = $3
+         WHERE worker_id = $4
+         RETURNING *`,
+        [name, upi_id, zone_id, existingWorkerRes.rows[0].worker_id]
+      );
+      worker = updatedWorkerRes.rows[0];
+    } else {
+      const workerRes = await client.query(
+        `INSERT INTO workers (name, phone, upi_id, zone_id)
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`,
+        [name, phone, upi_id, zone_id]
+      );
+      worker = workerRes.rows[0];
+    }
+
     const risk = await fetchRiskProfile(zone, worker);
     const multiplier = Number(risk.multiplier || 1);
 
@@ -43,7 +60,14 @@ router.post('/register', async (req, res) => {
     const wsString = toDateOnly(weekStart);
     const weString = toDateOnly(weekEnd);
 
-    const policyRes = await pool.query(
+    await client.query(
+      `UPDATE policies
+       SET status = 'expired'
+       WHERE worker_id = $1 AND status = 'active'`,
+      [worker.worker_id]
+    );
+
+    const policyRes = await client.query(
       `INSERT INTO policies
        (worker_id, tier, weekly_premium, base_coverage_cap, adjusted_coverage_cap, risk_multiplier, week_start, week_end, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active')
@@ -60,6 +84,8 @@ router.post('/register', async (req, res) => {
       ]
     );
 
+    await client.query('COMMIT');
+
     return ok(res, {
       worker_id: worker.worker_id,
       policy_id: policyRes.rows[0].policy_id,
@@ -71,7 +97,14 @@ router.post('/register', async (req, res) => {
       zone_name: zone.zone_name,
     });
   } catch (error) {
+    try {
+      await client.query('ROLLBACK');
+    } catch (_rollbackError) {
+      // no-op
+    }
     return fail(res, error, 500);
+  } finally {
+    client.release();
   }
 });
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -28,8 +28,15 @@ export default function DashboardScreen({ navigation }) {
   const [liveContext, setLiveContext] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [errorText, setErrorText] = useState('');
+  const loadingRef = useRef(false);
 
   const loadData = useCallback(async (showSpinner = true) => {
+    if (loadingRef.current) {
+      return;
+    }
+
+    loadingRef.current = true;
+
     if (showSpinner) {
       setRefreshing(true);
     }
@@ -69,6 +76,7 @@ export default function DashboardScreen({ navigation }) {
         'Could not refresh dashboard. Check backend and network connectivity.';
       setErrorText(message);
     } finally {
+      loadingRef.current = false;
       if (showSpinner) {
         setRefreshing(false);
       }
@@ -94,6 +102,9 @@ export default function DashboardScreen({ navigation }) {
 
   const risk = riskMeta(policy?.risk_multiplier);
   const latestClaims = claims.slice(0, 3);
+  const protectedThisWeek = Number(worker?.earnings_protected_this_week || 0);
+  const coverageCap = Number(policy?.adjusted_coverage_cap || 0);
+  const activeCoverageLeft = Math.max(0, coverageCap - protectedThisWeek);
 
   return (
     <SafeAreaView style={globalStyles.screen} edges={['top', 'left', 'right']}>
@@ -151,6 +162,14 @@ export default function DashboardScreen({ navigation }) {
             <View style={styles.gridItem}>
               <Text style={styles.gridLabel}>Days left</Text>
               <Text style={styles.gridValue}>{policy?.days_remaining || 0}</Text>
+            </View>
+            <View style={styles.gridItem}>
+              <Text style={styles.gridLabel}>Earnings protected</Text>
+              <Text style={styles.gridValue}>Rs {protectedThisWeek.toFixed(0)}</Text>
+            </View>
+            <View style={styles.gridItem}>
+              <Text style={styles.gridLabel}>Active weekly coverage</Text>
+              <Text style={styles.gridValue}>Rs {activeCoverageLeft.toFixed(0)}</Text>
             </View>
           </View>
 
