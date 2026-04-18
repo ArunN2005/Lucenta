@@ -1,4 +1,6 @@
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 
 const express = require('express');
 const cors = require('cors');
@@ -43,8 +45,24 @@ app.use('/api/payments', paymentsRoutes);
 
 const port = process.env.PORT || 3000;
 
-app.listen(port, () => {
-  console.log(`Kavach backend running on port ${port}`);
-  ensureFraudTables().catch((e) => console.error('Fraud table bootstrap error:', e.message));
-  scheduleTriggerEngine();
-});
+async function ensureSchema() {
+  const schemaPath = path.join(__dirname, 'db', 'schema.sql');
+  const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+  await pool.query(schemaSql);
+}
+
+async function start() {
+  try {
+    await ensureSchema();
+  } catch (e) {
+    console.error('Schema bootstrap error:', e.message);
+  }
+
+  app.listen(port, () => {
+    console.log(`Kavach backend running on port ${port}`);
+    ensureFraudTables().catch((e) => console.error('Fraud table bootstrap error:', e.message));
+    scheduleTriggerEngine();
+  });
+}
+
+start();
