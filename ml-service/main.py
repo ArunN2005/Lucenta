@@ -3,6 +3,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI
+import uvicorn
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -76,3 +77,8 @@ def risk_profile(payload: RiskProfileRequest):
         description = "Higher-risk zone. Coverage cap adjusted."
 
     return {"multiplier": round(multiplier, 4), "description": description}
+
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", "5000"))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
